@@ -1,7 +1,10 @@
 import socket
 import sqlite3
 import os
+import cryptage
 
+
+nomAbritre = 'C'
 cheminBd = 'Bd_babillage.db'
 
 def initDb():
@@ -18,14 +21,24 @@ def ajout(nom,cle):
     connectionBd.commit()
     connectionBd.close()
 
-initDb()
-ajout('A','ABC')
+def afficherBd():
+    connectionBd = sqlite3.connect(cheminBd)
+    cursor = connectionBd.cursor()
+    lignes = cursor.execute(" SELECT * FROM clefs ")
+    print (lignes.fetchall())
 
-connectionBd = sqlite3.connect(cheminBd)
-cursor = connectionBd.cursor()
-test = cursor.execute(" SELECT * FROM clefs")
-print (test.fetchall())
+if __name__ == "__main__":
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-coordServeur = ('127.0.0.1',12345)
-s.bind(coordServeur)
+    initDb()
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    coordServeur = ('127.0.0.1',12345)
+    s.bind(coordServeur)
+
+    while True:
+        (message,comm) = s.recvfrom(1024)
+        tab = message.decode().split(',')
+        if (tab[2] == 'T1'):
+            ajout(tab[0],tab[3])
+            aEnvoyer = cryptage.crypter(nomAbritre,tab[3]) + ',' + cryptage.crypter(tab[0],tab[3]) + ',T1'
+            s.sendto(aEnvoyer.encode(),comm)
+
