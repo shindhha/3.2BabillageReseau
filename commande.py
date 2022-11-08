@@ -8,7 +8,7 @@ def t1(client):
     global s
     nouvelleClef = input('entrez la clef: ')
     message = client.nom + ',' + client.nomArbitre + ',T1,' + nouvelleClef # creation du message a envoyé au serveur
-    clef = nouvelleClef
+    clef = nouvelleClef 
 
     s.sendto(message.encode(), client.coord_S) # envoie du message au serveur
 
