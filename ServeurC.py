@@ -21,11 +21,26 @@ def ajout(nom,cle):
     connectionBd.commit()
     connectionBd.close()
 
+def modif(cle, utilisateur):
+    connectionBd = sqlite3.connect(cheminBd)
+    cursor = connectionBd.cursor()
+    cursor.execute("UPDATE TABLE clefs SET clef = (?) WHERE nom = (?)",(cle,utilisateur))
+    connectionBd.commit()
+    connectionBd.close()
+
 def afficherBd():
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
     lignes = cursor.execute(" SELECT * FROM clefs ")
     print (lignes.fetchall())
+
+def cleUtilisateur(utilisateur):
+    connectionBd = sqlite3.connect(cheminBd)
+    cursor = connectionBd.cursor()
+    cle = cursor.execute(" SELECT clef FROM clefs WHERE nom = (?)",(utilisateur))
+
+    return cle.fetchone()[0]
+
 
 if __name__ == "__main__":
 
@@ -37,8 +52,27 @@ if __name__ == "__main__":
     while True:
         (message,comm) = s.recvfrom(1024)
         tab = message.decode().split(',')
+
         if (tab[2] == 'T1'):
-            ajout(tab[0],tab[3])
-            aEnvoyer = cryptage.crypter(nomAbritre,tab[3]) + ',' + cryptage.crypter(tab[0],tab[3]) + ',T1'
+            try :
+                ajout(tab[0],tab[3])
+                aEnvoyer = cryptage.crypter(nomAbritre + ',' + tab[0] + ',T1',tab[3])
+
+            except Exception:
+                aEnvoyer = nomAbritre + ',' + tab[0] + ',T1'
             s.sendto(aEnvoyer.encode(),comm)
 
+        
+        elif (cryptage.decrypter(tab[2],cleUtilisateur(tab[0])).split(',')[0] == 'T2'):
+            
+            tab2 = cryptage.decrypter(tab[2],cleUtilisateur(tab[0])).split(',')
+
+            try:
+                oldCle = cleUtilisateur(tab[0])
+                modif(tab2[2],tab[0])
+                aEnvoyer = cryptage.crypter(tab[0] + ',' + nomAbritre + ',T2', cleUtilisateur(tab[0]))
+
+            except Exception:
+                aEnvoyer = cryptage.crypter(nomAbritre + tab[0] + ',T2', oldCle)
+
+            s.sendto(aEnvoyer.encode(),comm)
