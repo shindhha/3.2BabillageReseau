@@ -20,13 +20,16 @@ def menu(user):
         demande = input("\nque voulez vous faire ?"
                         + "\n1 - ajouter une clef"
                         + "\n2 - modifier une clef"
-                        + "\n3 - quitter\n")
+                        + "\n3 - suprimer sa clef"
+                        + "\n4 - quitter\n")
 
         if (demande == '1'):
             commande.t1(user)
         elif (demande == '2'):
             commande.t2(user)
         elif (demande == '3'):
+            commande.t3(user)
+        elif (demande == '4'):
             print ("Au revoir!")
             ok = False
         else:

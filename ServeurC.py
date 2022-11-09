@@ -4,7 +4,7 @@ import os
 import cryptage
 
 
-nomAbritre = 'C'
+nomArbitre = 'C'
 cheminBd = 'Bd_babillage.db'
 
 def initDb():
@@ -17,14 +17,18 @@ def initDb():
 def ajout(nom,cle):
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
-    cursor.execute("INSERT INTO clefs VALUES (?,?)", (nom,cle))
+    initialiser = cursor.execute("SELECT nom FROM clefs WHERE nom = (?)",(nom)).fetchone()
+    if (initialiser != None):
+        modif(cle,nom)
+    else:
+        cursor.execute("INSERT INTO clefs VALUES (?,?)", (nom,cle))
     connectionBd.commit()
     connectionBd.close()
 
 def modif(cle, utilisateur):
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
-    cursor.execute("UPDATE TABLE clefs SET clef = (?) WHERE nom = (?)",(cle,utilisateur))
+    cursor.execute("UPDATE clefs SET clef = (?) WHERE nom = (?)",(cle,utilisateur))
     connectionBd.commit()
     connectionBd.close()
 
@@ -48,19 +52,25 @@ if __name__ == "__main__":
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     coordServeur = ('127.0.0.1',12345)
     s.bind(coordServeur)
+    
 
     while True:
+
         (message,comm) = s.recvfrom(1024)
         tab = message.decode().split(',') # decoupage du message reçu en fonction des virgules
+
+
 
         if (tab[2] == 'T1'): # verification de la requette reçu
             try :
                 ajout(tab[0],tab[3])
-                aEnvoyer = cryptage.crypter(nomAbritre + ',' + tab[0] + ',T1',tab[3]) # creation du message de validation a envoyer dans le cas ou l'instruction est passé
+                aEnvoyer = cryptage.crypter(nomArbitre + ',' + tab[0] + ',T1',tab[3]) # creation du message de validation a envoyer dans le cas ou l'instruction est passé
 
             except Exception:
-                aEnvoyer = nomAbritre + ',' + tab[0] + ',T1' # creation du message de validation a envoyer dans le cas ou l'instruction est n'est pas passsé
+                aEnvoyer = nomArbitre + ',' + tab[0] + ',T1' # creation du message de validation de la creation de cle
+
             s.sendto(aEnvoyer.encode(),comm) # envoie du message de validation
+
 
         
         elif (cryptage.decrypter(tab[2],cleUtilisateur(tab[0])).split(',')[0] == 'T2'): # verification de la requette reçu
@@ -70,10 +80,23 @@ if __name__ == "__main__":
             try:
                 oldCle = cleUtilisateur(tab[0])
                 modif(tab2[2],tab[0])
-                aEnvoyer = cryptage.crypter(tab[0] + ',' + nomAbritre + ',T2', cleUtilisateur(tab[0])) # creation du message de validation a envoyer dans le cas ou l'instruction est passé
-
+                aEnvoyer = cryptage.crypter(tab[0] + ',' + nomArbitre + ',T2', cleUtilisateur(tab[0])) # creation du message de validation a envoyer dans le cas ou l'instruction est passé
 
             except Exception:
-                aEnvoyer = cryptage.crypter(nomAbritre + tab[0] + ',T2', oldCle) # creation du message de validation a envoyer dans le cas ou l'instruction est n'est pas passsé
-
+                aEnvoyer = cryptage.crypter(nomArbitre + tab[0] + ',T2', oldCle) # creation du message de validation de la modification de cle
             s.sendto(aEnvoyer.encode(),comm) # envoie du message de validation
+
+
+
+        elif (cryptage.decrypter(tab[2],cleUtilisateur(tab[0])).split(',')[0] == 'T3'): # verification de la requette reçu
+
+            tab2 = cryptage.decrypter(tab[2],cleUtilisateur(tab[0])).split(',')
+
+            try:
+                modif(None,tab[0])
+                aEnvoyer = cryptage.crypter(nomArbitre + ',' + tab[0] + ',T3',tab2[1]) # creation du message de validation de la supression de clé
+
+            except Exception:
+                aEnvoyer = cryptage.crypter(tab[0] + ',' + nomArbitre, tab2[1])
+            
+            s.sendto(aEnvoyer.encode(), comm) # envoie du message de validation
