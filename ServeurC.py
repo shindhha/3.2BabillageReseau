@@ -11,24 +11,30 @@ def initDb():
     if (not(os.path.exists(cheminBd) and os.path.isfile(cheminBd))):
         connectionBd = sqlite3.connect(cheminBd) # connection a la base de données
         cursor = connectionBd.cursor() # creation du curseur permetant l'ecriture dans la base en langage sql
-        cursor.execute(""" CREATE TABLE clefs (nom TEXT, clef TEXT, CONSTRAINT pk_clefs PRIMARY KEY (nom)) """) # requete de creation de la table
+        cursor.execute(""" CREATE TABLE clefs (nom TEXT, clef TEXT, ip TEXT, port TEXT, CONSTRAINT pk_clefs PRIMARY KEY (nom)) """) # requete de creation de la table
         connectionBd.close() # deconnection de la base
 
-def ajout(nom,cle):
+def ajout(nom,cle,connection):
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
     initialiser = cursor.execute("SELECT nom FROM clefs WHERE nom = (?)",(nom)).fetchone() # verification utilisateur deja créer ou non
     if (initialiser != None):
         modif(cle,nom) # si deja créer et clef a Null alors modification clef
     else:
-        cursor.execute("INSERT INTO clefs VALUES (?,?)", (nom,cle)) # si pas créer creation de l'utilisateur et ajout de sa clef
+        print ('1')
+        print ('2')
+        ip = connection[0] # separation de l'IP et du PORT dans la connection
+        port = connection[1]
+        print('3')
+        cursor.execute("INSERT INTO clefs VALUES (?,?,?,?)", (nom,cle,ip,port)) # si pas créer creation de l'utilisateur et ajout de sa clef
+        print('4')
     connectionBd.commit()
     connectionBd.close()
 
 def modif(cle, utilisateur):
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
-    cursor.execute("UPDATE clefs SET clef = (?) WHERE nom = (?)",(cle,utilisateur)) # modification de la aleur  clef de l'utilisateur donné
+    cursor.execute("UPDATE clefs SET clef = (?) WHERE nom = (?)",(cle,utilisateur)) # modification valeur de la clef de l'utilisateur donné
     connectionBd.commit()
     connectionBd.close()
 
@@ -63,13 +69,15 @@ if __name__ == "__main__":
 
         if (tab[2] == 'T1'): # verification de la requette reçu
             try :
-                ajout(tab[0],tab[3])
+                ajout(tab[0],tab[3],comm)
                 aEnvoyer = cryptage.crypter(nomArbitre + ',' + tab[0] + ',T1',tab[3]) # creation du message de validation a envoyer dans le cas ou l'instruction est passé
 
-            except Exception:
+            except Exception as e:
+                raise e
                 aEnvoyer = nomArbitre + ',' + tab[0] + ',T1' # creation du message de validation de la creation de cle
 
             s.sendto(aEnvoyer.encode(),comm) # envoie du message de validation
+            afficherBd()
 
 
         
