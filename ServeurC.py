@@ -9,26 +9,26 @@ cheminBd = 'Bd_babillage.db'
 
 def initDb():
     if (not(os.path.exists(cheminBd) and os.path.isfile(cheminBd))):
-        connectionBd = sqlite3.connect(cheminBd)
-        cursor = connectionBd.cursor()
-        cursor.execute(""" CREATE TABLE clefs (nom TEXT, clef TEXT, CONSTRAINT pk_clefs PRIMARY KEY (nom)) """)
-        connectionBd.close()
+        connectionBd = sqlite3.connect(cheminBd) # connection a la base de données
+        cursor = connectionBd.cursor() # creation du curseur permetant l'ecriture dans la base en langage sql
+        cursor.execute(""" CREATE TABLE clefs (nom TEXT, clef TEXT, CONSTRAINT pk_clefs PRIMARY KEY (nom)) """) # requete de creation de la table
+        connectionBd.close() # deconnection de la base
 
 def ajout(nom,cle):
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
-    initialiser = cursor.execute("SELECT nom FROM clefs WHERE nom = (?)",(nom)).fetchone()
+    initialiser = cursor.execute("SELECT nom FROM clefs WHERE nom = (?)",(nom)).fetchone() # verification utilisateur deja créer ou non
     if (initialiser != None):
-        modif(cle,nom)
+        modif(cle,nom) # si deja créer et clef a Null alors modification clef
     else:
-        cursor.execute("INSERT INTO clefs VALUES (?,?)", (nom,cle))
+        cursor.execute("INSERT INTO clefs VALUES (?,?)", (nom,cle)) # si pas créer creation de l'utilisateur et ajout de sa clef
     connectionBd.commit()
     connectionBd.close()
 
 def modif(cle, utilisateur):
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
-    cursor.execute("UPDATE clefs SET clef = (?) WHERE nom = (?)",(cle,utilisateur))
+    cursor.execute("UPDATE clefs SET clef = (?) WHERE nom = (?)",(cle,utilisateur)) # modification de la aleur  clef de l'utilisateur donné
     connectionBd.commit()
     connectionBd.close()
 
