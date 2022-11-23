@@ -6,22 +6,24 @@ s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 def t1(client):
     global s
-    nouvelleClef = input('entrez la clef: ')
-    message = client.nom + ',' + client.nomArbitre + ',T1,' + nouvelleClef # creation du message de création d'une clé
-    clef = nouvelleClef 
+    if (client.clef == None):
+        nouvelleClef = input('entrez la clef: ')
+        message = client.nom + ',' + client.nomArbitre + ',T1,' + nouvelleClef # creation du message de création d'une clé
+        clef = nouvelleClef 
 
-    s.sendto(message.encode(), client.coord_S) # envoie du message au serveur
+        s.sendto(message.encode(), client.coord_S) # envoie du message au serveur
 
-    print("En attente de verification .....")
-    (reponse, client.coord_S) = s.recvfrom(1024) # reception de la reponse
-    tab1 = reponse.decode().split(',') # decoupe de la reponse avec les virgules
-
-    if (tab1[0] == client.nomArbitre ): # verification commande bien passé suivant message renvoyer par le serveur
-        print ("echec de l'ajout de la clé")
+        print("En attente de verification .....")
+        (reponse, client.coord_S) = s.recvfrom(1024) # reception de la reponse
+        tab1 = reponse.decode().split(',') # decoupe de la reponse avec les virgules
+        
+        if (tab1[0] == client.nomArbitre ): # verification commande bien passé suivant message renvoyer par le serveur
+            print ("echec de l'ajout de la clé")
+        else:
+            print("ajout de la clef avec succès")
+            client.clef = nouvelleClef
     else:
-        print("ajout de la clef avec succès")
-        client.clef = nouvelleClef
-
+        print("vous possedez deja une clef privee")
 
 
 def t2(client):

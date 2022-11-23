@@ -12,6 +12,18 @@ lettres[37] = ','
 lettres[38] = '-'
 lettres[39] = '.'
 
+def forme(phrase):
+    phrase = phrase.replace('é','e')
+    phrase = phrase.replace('è','e')
+    phrase = phrase.replace('à','a')
+    phrase = phrase.replace('ù','u')
+    phrase = phrase.replace('â','a')
+    phrase = phrase.replace('ï','i')
+    phrase = phrase.replace('ê','e')
+    phrase = phrase.replace('ô','o')
+    phrase = phrase.upper()
+    return phrase
+
 def crypter(phrase, clef):
     phrase = forme(phrase)
     clef = clef.upper()
@@ -35,14 +47,3 @@ def decrypter(phrase,clef):
         nouvelPhrase += lettres[(lettrePhrase - lettreCle) % len(lettres)] # decryptage par vigenère
         rang += 1
     return nouvelPhrase
-
-def forme(phrase):
-    phrase = phrase.replace('é','e')
-    phrase = phrase.replace('è','e')
-    phrase = phrase.replace('à','a')
-    phrase = phrase.replace('ù','u')
-    phrase = phrase.replace('â','a')
-    phrase = phrase.replace('ï','i')
-    phrase = phrase.replace('ê','e')
-    phrase = phrase.upper()
-    return phrase

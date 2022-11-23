@@ -17,17 +17,9 @@ def initDb():
 def ajout(nom,cle,connection):
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
-    initialiser = cursor.execute("SELECT nom FROM clefs WHERE nom = (?)",(nom)).fetchone() # verification utilisateur deja créer ou non
-    if (initialiser != None):
-        modif(cle,nom) # si deja créer et clef a Null alors modification clef
-    else:
-        print ('1')
-        print ('2')
-        ip = connection[0] # separation de l'IP et du PORT dans la connection
-        port = connection[1]
-        print('3')
-        cursor.execute("INSERT INTO clefs VALUES (?,?,?,?)", (nom,cle,ip,port)) # si pas créer creation de l'utilisateur et ajout de sa clef
-        print('4')
+    ip = connection[0] # separation de l'IP et du PORT dans la connection
+    port = connection[1]
+    cursor.execute("INSERT INTO clefs VALUES (?,?,?,?)", (nom,cle,ip,port)) # si pas créer creation de l'utilisateur et ajout de sa clef
     connectionBd.commit()
     connectionBd.close()
 
@@ -35,6 +27,13 @@ def modif(cle, utilisateur):
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
     cursor.execute("UPDATE clefs SET clef = (?) WHERE nom = (?)",(cle,utilisateur)) # modification valeur de la clef de l'utilisateur donné
+    connectionBd.commit()
+    connectionBd.close()
+
+def suppr(utilisateur):
+    connectionBd = sqlite3.connect(cheminBd)
+    cursor = connectionBd.cursor()
+    cursor.execute("DELETE FROM clefs WHERE nom =(?)",(utilisateur))#supression de la clé et de l'utilisateur
     connectionBd.commit()
     connectionBd.close()
 
@@ -72,12 +71,10 @@ if __name__ == "__main__":
                 ajout(tab[0],tab[3],comm)
                 aEnvoyer = cryptage.crypter(nomArbitre + ',' + tab[0] + ',T1',tab[3]) # creation du message de validation a envoyer dans le cas ou l'instruction est passé
 
-            except Exception as e:
-                raise e
+            except Exception:
                 aEnvoyer = nomArbitre + ',' + tab[0] + ',T1' # creation du message de validation de la creation de cle
 
             s.sendto(aEnvoyer.encode(),comm) # envoie du message de validation
-            afficherBd()
 
 
         
@@ -101,7 +98,9 @@ if __name__ == "__main__":
             tab2 = cryptage.decrypter(tab[2],cleUtilisateur(tab[0])).split(',')
 
             try:
-                modif(None,tab[0])
+                afficherBd()
+                suppr(tab[0])
+                afficherBd()
                 aEnvoyer = cryptage.crypter(nomArbitre + ',' + tab[0] + ',T3',tab2[1]) # creation du message de validation de la supression de clé
 
             except Exception:
