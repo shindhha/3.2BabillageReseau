@@ -1,3 +1,5 @@
+import random
+
 texte = 'antoine'
 clef = 'b'
 
@@ -47,3 +49,14 @@ def decrypter(phrase,clef):
         nouvelPhrase += lettres[(lettrePhrase - lettreCle) % len(lettres)] # decryptage par vigenère
         rang += 1
     return nouvelPhrase
+
+def clefSession(clef1,clef2):
+    ks = '' # initialisation de la clef de session
+    longeurClef = random.randint(len(clef1), len(clef2))
+    for i in range(longeurClef):
+        choixClef = random.randint(1,2)
+        if (choixClef == 1):
+            ks += clef1[random.randint(1,len(clef1) - 1)]
+        else:
+            ks += clef2[random.randint(1,len(clef2) - 1)]
+    return ks

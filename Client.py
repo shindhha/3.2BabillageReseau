@@ -21,7 +21,8 @@ def menu(user):
                         + "\n1 - ajouter une clef"
                         + "\n2 - modifier une clef"
                         + "\n3 - suprimer sa clef"
-                        + "\n4 - quitter\n")
+                        + "\n4 - test clef session"
+                        + "\n5 - quitter\n")
 
         if (demande == '1'):
             commande.t1(user)
@@ -30,6 +31,8 @@ def menu(user):
         elif (demande == '3'):
             commande.t3(user)
         elif (demande == '4'):
+            commande.test(user)
+        elif (demande == '5'):
             print ("Au revoir!")
             ok = False
         else:

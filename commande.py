@@ -62,3 +62,9 @@ def t3(client):
             print("echec de la supression de la clef")
     else:
         print("votre clef n'est pas initialisé")
+
+
+def test(client):
+    clefB = 'ABCDEFG'
+    ks = cryptage.clefSession(client.clef,clefB)
+    print (ks)
