@@ -50,6 +50,11 @@ def cleUtilisateur(utilisateur):
 
     return cle.fetchone()[0]
 
+def utilisateur():
+    connectionBd = sqlite3.connect(cheminBd)
+    cursor = connectionBd.cursor()
+    users = cursor.execute("SELECT nom FROM clefs")
+    return users.fetchall()
 
 if __name__ == "__main__":
 
@@ -63,6 +68,7 @@ if __name__ == "__main__":
 
         (message,comm) = s.recvfrom(1024)
         tab = message.decode().split(',') # decoupage du message reçu en fonction des virgules
+
 
 
 
@@ -98,9 +104,7 @@ if __name__ == "__main__":
             tab2 = cryptage.decrypter(tab[2],cleUtilisateur(tab[0])).split(',')
 
             try:
-                afficherBd()
                 suppr(tab[0])
-                afficherBd()
                 aEnvoyer = cryptage.crypter(nomArbitre + ',' + tab[0] + ',T3',tab2[1]) # creation du message de validation de la supression de clé
 
             except Exception:

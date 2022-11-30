@@ -1,12 +1,16 @@
 import cryptage
 import commande
+import threading
 
 class Client:
     def __init__(self, nom):
         self.nom = nom
         self.nomArbitre = 'C'
         self.clef = None
+        self.ks = None
         self.coord_S = ('127.0.0.1', 12345)
+        self.clefTemporaire = None
+        
 
 
 def creation():
@@ -16,12 +20,12 @@ def creation():
 
 def menu(user):
     ok = True
-    while ok:    
+    while ok:
         demande = input("\nque voulez vous faire ?"
                         + "\n1 - ajouter une clef"
                         + "\n2 - modifier une clef"
                         + "\n3 - suprimer sa clef"
-                        + "\n4 - test clef session"
+                        + "\n4 - comuniquer avec un utilisteur"
                         + "\n5 - quitter\n")
 
         if (demande == '1'):
@@ -31,7 +35,7 @@ def menu(user):
         elif (demande == '3'):
             commande.t3(user)
         elif (demande == '4'):
-            commande.test(user)
+            commande.t4(user)
         elif (demande == '5'):
             print ("Au revoir!")
             ok = False
@@ -42,4 +46,7 @@ def menu(user):
 if __name__ == "__main__":
 
     user = creation()
+    recevoir = threading.Thread(target=commande.reception, args = [user])
+
+    recevoir.start()
     menu(user)

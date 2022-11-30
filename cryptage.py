@@ -4,7 +4,7 @@ texte = 'antoine'
 clef = 'b'
 
 lettres = {}
-
+# creation du dictionnaire contenant l'alphabet utiliser pour le cryptage / decryptage
 for i in  range (ord('A'),ord('Z') + 1):
     lettres[i - ord('A')] = chr(i)
 lettres[26] = ' '
