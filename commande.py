@@ -21,25 +21,22 @@ def reception(client):
         (reponse,client.coord_S) = s.recvfrom(1024) # reception des message en provenence du serveur
     
         phrase = reponse.decode() # recupere la reponse envoyé par le serveur
-        verif = phrase[len(phrase) - 2] + phrase[len(phrase) - 1]
-        print ('verif : ' + verif)
-            
-        if (verif == 'T1'): # verification commande d'ajout de la clé effectuer
+        verif = cryptage.decrypter(phrase, client.clefTemporaire)
+        
+        if (phrase[len(phrase) - 2] + phrase[len(phrase) - 1] == 'T1'): # verification commande d'ajout de la clé effectuer
             print ('entrer t1')
-            client.clefTemporaire = None 
             print ("echec de l'ajout de la clé")
-        elif (client.clefTemporaire != None and cryptage.decrypter(verif,client.clefTemporaire) == 'T1'): # verification cas echec ajout de la clé
+        elif (verif[len(phrase) - 2] + verif[len(phrase) - 1] == 'T1'): # verification cas echec ajout de la clé
             client.clef = client.clefTemporaire
-            client.clefTemporaire = None
             print("ajout de la clef avec succès")
 
         
-        if (client.clef != None and cryptage.decrypter(verif, client.clef) == 'T2'): # verification commande de modification de clé bien exécuté
-            client.clefTemporaire = None
+        verifvraie = cryptage.decrypter(phrase,client.clefTemporaire)
+        veriffaux = cryptage.decrypter(phrase,client.clef)
+        if (veriffaux[len(phrase) - 2] + veriffaux[len(phrase) - 1] == 'T2'): # verification commande de modification de clé bien exécuté
             print ("echec de la modification de la clé")
-        elif (client.clefTemporaire != None and cryptage.decrypter(verif,client.clefTemporaire) == 'T2'):
+        elif (verifvraie[len(phrase) - 2] + verifvraie[len(phrase) - 1] == 'T2'):
             client.clef = client.clefTemporaire
-            client.clefTemporaire = None
             print("modification de la clef avec succès")
 
             
@@ -69,6 +66,7 @@ def t2(client):
     global s
     if (client.clef != None):
         nouvelleClef = input('entrez la nouvelle clef: ')
+        client.clefTemporaire = nouvelleClef
         message = client.nom + ',' + client.nomArbitre + ',' + cryptage.crypter("T2," + client.clef + "," + nouvelleClef,client.clef) # creation du message de modification de la clé
         s.sendto(message.encode(), client.coord_S) # envoie du message au serveur
 

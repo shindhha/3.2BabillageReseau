@@ -83,22 +83,26 @@ if __name__ == "__main__":
     while True:
 
         (message,comm) = s.recvfrom(1024)
+        ip = comm[0]
+        port = comm[1]
         message = message.decode() # recuperation du message reçu 
-        if (selectUtilisateurPort(comm[1]) != None): #verification utilisateur deja créer ou premiere connection
-            longeur = len (selectUtilisateurPort(comm[1])) + len(nomArbitre) + 1 # longeur du message avant type (avant t1 t2 ou t3)
-            TypeMessage = message[longeur] + message[longeur +1] #selection des 2 caractere decrivant le type du message
+        if (selectUtilisateurPort(port) != None): #verification utilisateur deja créer ou premiere connection
+            longeur = len (selectUtilisateurPort(comm[1])) + len(nomArbitre) # longeur du message avant type (avant t1 t2 ou t3)
+            typeMessage = message[longeur] + message[longeur +1] #selection des 2 caractere decrivant le type du message
         else :
-            TypeMessage = None
-        print (TypeMessage)
+            typeMessage = None
+        print (typeMessage)
 
 
-        if (TypeMessage == None): # verification de la requette reçu
+        if (typeMessage == None): # verification de la requette reçu
             try :
                 tab = message.split(',')
                 ajout(tab[0],tab[3],comm)
-                aEnvoyer = cryptage.crypter(nomArbitre + ',' + tab[0] + ',T1',tab[3]) # creation du message de validation a envoyer dans le cas ou l'instruction est passé
+                print ('passage')
+                aEnvoyer = cryptage.crypter(nomArbitre + ',' + tab[0] + ',T1',tab[3]) # creation du message de validation a envoyer dans le cas ou l'instruction est passé  
                 print (aEnvoyer)
-                
+                print (tab[3])
+                print (cryptage.crypter(',T1',tab[3]))
 
             except Exception as e:
                 raise e
@@ -106,6 +110,12 @@ if __name__ == "__main__":
 
             s.sendto(aEnvoyer.encode(),comm) # envoie du message de validation
 
-
-        
-        
+        elif (cryptage.decrypter(typeMessage,cleUtilisateur(selectUtilisateurPort(port))) == 'T2'):
+            parite1 = message[0:longeur]
+            print (partie1)
+            partie2 = cryptage.decrypter(message[longeur:len(message)])
+            print (partie2)
+            nvMessage = parite1 + partie2
+            print (nvMessage)
+            tab = nvMessage.split(',')
+            print (tab)
