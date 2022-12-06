@@ -14,6 +14,19 @@ lettres[37] = ','
 lettres[38] = '-'
 lettres[39] = '.'
 
+def cleOk(clef):
+    clef = clef.upper()
+    for i in clef: # selection des lettres de la cle 1 par 1
+        ok = False
+        for n in range (len(lettres)): # comparaison de la lettre de la cle avec toute les lettres de notre alphabet
+            if (i == lettres.get(n)): #si lettres dans alphabet alors ok
+                ok =True
+                break
+        if (not ok):
+            return False
+    return True
+
+
 def forme(phrase):
     phrase = phrase.replace('é','e')
     phrase = phrase.replace('è','e')
@@ -27,6 +40,7 @@ def forme(phrase):
     phrase = phrase.upper()
     return phrase
 
+
 def crypter(phrase, clef):
     phrase = forme(phrase)
     clef = clef.upper()
@@ -39,6 +53,7 @@ def crypter(phrase, clef):
         rang += 1
     return nouvelPhrase
 
+
 def decrypter(phrase,clef):
     phrase = phrase.upper()
     clef = clef.upper()
@@ -50,6 +65,7 @@ def decrypter(phrase,clef):
         nouvelPhrase += lettres[(lettrePhrase - lettreCle) % len(lettres)] # decryptage par vigenère
         rang += 1
     return nouvelPhrase
+
 
 def clefSession(clef1,clef2):
     ks = '' # initialisation de la clef de session

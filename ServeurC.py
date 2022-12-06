@@ -133,10 +133,8 @@ if __name__ == "__main__":
                 nvMessage = partie1 + partie2 # assemblage des 2 partie
                 tab = nvMessage.split(',') # decoupage du message sous forme de tableau en fonction des virgules
 
-                afficherBd()
                 suppr(tab[0])
-                afficherBd()
-
+                
                 aEnvoyer = cryptage.crypter(tab[0] + ',' + tab[1] + ',T3',tab[3])
 
             except Exception as e:

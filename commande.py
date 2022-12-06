@@ -51,12 +51,15 @@ def t1(client):
     global s
     if (client.clef == None):
         nouvelleClef = input('entrez la clef: ')
-        message = client.nom + ',' + client.nomArbitre + ',T1,' + nouvelleClef # creation du message de création d'une clé
-        client.clefTemporaire = nouvelleClef
+        if (not cryptage.cleOk(nouvelleClef)):
+            print ('la cle contient un caractere speciale non autorise')
+        else:
+            message = client.nom + ',' + client.nomArbitre + ',T1,' + nouvelleClef # creation du message de création d'une clé
+            client.clefTemporaire = nouvelleClef
 
-        s.sendto(message.encode(), client.coord_S) # envoie du message au serveur
+            s.sendto(message.encode(), client.coord_S) # envoie du message au serveur
 
-        print("En attente de verification .....")
+            print("En attente de verification .....")
 
     else:
         print("vous possedez deja une clef privee")
