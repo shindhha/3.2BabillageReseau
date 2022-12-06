@@ -33,6 +33,7 @@ def t2(client):
         message = client.nom + ',' + client.nomArbitre + ',' + cryptage.crypter("T2," + client.clef + "," + nouvelleClef,client.clef) # creation du message de modification de la clé
         s.sendto(message.encode(), client.coord_S) # envoie du message au serveur
 
+
         print("En attente de verification .....")
         (reponse, client.coord_S) = s.recvfrom(1024) # reception de la reponse
 
