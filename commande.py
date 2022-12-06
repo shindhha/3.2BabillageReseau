@@ -24,7 +24,6 @@ def reception(client):
         verif = cryptage.decrypter(phrase, client.clefTemporaire)
         
         if (phrase[len(phrase) - 2] + phrase[len(phrase) - 1] == 'T1'): # verification commande d'ajout de la clé effectuer
-            print ('entrer t1')
             print ("echec de l'ajout de la clé")
         elif (verif[len(phrase) - 2] + verif[len(phrase) - 1] == 'T1'): # verification cas echec ajout de la clé
             client.clef = client.clefTemporaire
@@ -33,17 +32,18 @@ def reception(client):
         
         verifvraie = cryptage.decrypter(phrase,client.clefTemporaire)
         veriffaux = cryptage.decrypter(phrase,client.clef)
+
         if (veriffaux[len(phrase) - 2] + veriffaux[len(phrase) - 1] == 'T2'): # verification commande de modification de clé bien exécuté
             print ("echec de la modification de la clé")
         elif (verifvraie[len(phrase) - 2] + verifvraie[len(phrase) - 1] == 'T2'):
             client.clef = client.clefTemporaire
             print("modification de la clef avec succès")
 
-            
-        if (client.clef != None and  cryptage.decrypter(verif,client.clef) == 'T3'): # verification commande de supression de clef bien exécuté
+            verif = cryptage.decrypter(phrase,client.clefTemporaire)
+        if (verif[len(phrase) - 2] + verif[len(phrase) - 1] == 'T3'): # verification commande de supression de clef bien exécuté
             client.clef = None
             print("suppression de le clef avec succès")
-        elif (client.clef != None and len(cryptage.crypter(phrase,client.clef).split(',')) == 2):
+        elif (verif[len(phrase) - len(client.nomArbitre) : len(phrase) - 1] == client.nomArbitre):
             print("echec de la supression de la clef")
 
 
