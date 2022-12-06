@@ -33,7 +33,7 @@ def modif(cle, utilisateur):
 def suppr(utilisateur):
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
-    cursor.execute("DELETE FROM clefs WHERE nom =(?)",(utilisateur))#supression de la clé et de l'utilisateur
+    cursor.execute("DELETE FROM clefs WHERE nom = (?) ",(utilisateur))#supression de la clé et de l'utilisateur
     connectionBd.commit()
     connectionBd.close()
 
@@ -46,15 +46,31 @@ def afficherBd():
 def cleUtilisateur(utilisateur):
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
-    cle = cursor.execute(" SELECT clef FROM clefs WHERE nom = (?)",(utilisateur))
+    cle = cursor.execute(" SELECT nom FROM clefs WHERE nom = (?) ", ( utilisateur,))
 
     return cle.fetchone()[0]
+    connectionBd.close()
 
 def utilisateur():
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
     users = cursor.execute("SELECT nom FROM clefs")
+
     return users.fetchall()
+    connectionBd.close()
+
+def selectUtilisateurPort(port) :
+    connectionBd = sqlite3.connect(cheminBd)
+    cursor = connectionBd.cursor()
+    user = cursor.execute("SELECT nom FROM clefs WHERE port = (?)",(port,))
+    print (user)
+
+    try :
+        return user.fetchone()[0]
+    except Exception :
+        return None
+    
+    connectionBd.close()
 
 if __name__ == "__main__":
 
@@ -67,47 +83,29 @@ if __name__ == "__main__":
     while True:
 
         (message,comm) = s.recvfrom(1024)
-        tab = message.decode().split(',') # decoupage du message reçu en fonction des virgules
+        message = message.decode() # recuperation du message reçu 
+        if (selectUtilisateurPort(comm[1]) != None): #verification utilisateur deja créer ou premiere connection
+            longeur = len (selectUtilisateurPort(comm[1])) + len(nomArbitre) + 1 # longeur du message avant type (avant t1 t2 ou t3)
+            TypeMessage = message[longeur] + message[longeur +1] #selection des 2 caractere decrivant le type du message
+        else :
+            TypeMessage = None
+        print (TypeMessage)
 
 
-
-
-        if (tab[2] == 'T1'): # verification de la requette reçu
+        if (TypeMessage == None): # verification de la requette reçu
             try :
+                tab = message.split(',')
                 ajout(tab[0],tab[3],comm)
                 aEnvoyer = cryptage.crypter(nomArbitre + ',' + tab[0] + ',T1',tab[3]) # creation du message de validation a envoyer dans le cas ou l'instruction est passé
+                print (aEnvoyer)
+                
 
-            except Exception:
-                aEnvoyer = nomArbitre + ',' + tab[0] + ',T1' # creation du message de validation de la creation de cle
+            except Exception as e:
+                raise e
+                aEnvoyer = nomArbitre + ',' + tab[0] + ',T1' # creation du message d'echec de l'ajout
 
             s.sendto(aEnvoyer.encode(),comm) # envoie du message de validation
 
 
         
-        elif (cryptage.decrypter(tab[2],cleUtilisateur(tab[0])).split(',')[0] == 'T2'): # verification de la requette reçu
-
-            tab2 = cryptage.decrypter(tab[2],cleUtilisateur(tab[0])).split(',') # decoupage de la partie crypté du message reçu
-
-            try:
-                oldCle = cleUtilisateur(tab[0])
-                modif(tab2[2],tab[0])
-                aEnvoyer = cryptage.crypter(tab[0] + ',' + nomArbitre + ',T2', cleUtilisateur(tab[0])) # creation du message de validation a envoyer dans le cas ou l'instruction est passé
-
-            except Exception:
-                aEnvoyer = cryptage.crypter(nomArbitre + tab[0] + ',T2', oldCle) # creation du message de validation de la modification de cle
-            s.sendto(aEnvoyer.encode(),comm) # envoie du message de validation
-
-
-
-        elif (cryptage.decrypter(tab[2],cleUtilisateur(tab[0])).split(',')[0] == 'T3'): # verification de la requette reçu
-
-            tab2 = cryptage.decrypter(tab[2],cleUtilisateur(tab[0])).split(',')
-
-            try:
-                suppr(tab[0])
-                aEnvoyer = cryptage.crypter(nomArbitre + ',' + tab[0] + ',T3',tab2[1]) # creation du message de validation de la supression de clé
-
-            except Exception:
-                aEnvoyer = cryptage.crypter(tab[0] + ',' + nomArbitre, tab2[1])
-            
-            s.sendto(aEnvoyer.encode(), comm) # envoie du message de validation
+        

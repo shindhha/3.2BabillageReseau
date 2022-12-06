@@ -23,6 +23,7 @@ def forme(phrase):
     phrase = phrase.replace('ï','i')
     phrase = phrase.replace('ê','e')
     phrase = phrase.replace('ô','o')
+    phrase = phrase.replace('ç','c')
     phrase = phrase.upper()
     return phrase
 

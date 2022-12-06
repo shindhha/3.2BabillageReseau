@@ -9,7 +9,10 @@ class Client:
         self.clef = None
         self.ks = None
         self.coord_S = ('127.0.0.1', 12345)
+        self.coordonee = None
+        self.port = None
         self.clefTemporaire = None
+        self.recevoir = threading.Thread(target=commande.reception, args = (self,))
         
 
 
@@ -46,7 +49,6 @@ def menu(user):
 if __name__ == "__main__":
 
     user = creation()
-    recevoir = threading.Thread(target=commande.reception, args = [user])
-
-    recevoir.start()
+    commande.relierSocket(user)
+    user.recevoir.start()
     menu(user)
