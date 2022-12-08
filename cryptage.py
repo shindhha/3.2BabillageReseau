@@ -19,7 +19,7 @@ def cleOk(clef):
     for i in clef: # selection des lettres de la cle 1 par 1
         ok = False
         for n in range (len(lettres)): # comparaison de la lettre de la cle avec toute les lettres de notre alphabet
-            if (i == lettres.get(n)): #si lettres dans alphabet alors ok
+            if (i != ',' and i == lettres.get(n)): #si lettres dans alphabet alors ok
                 ok =True
                 break
         if (not ok):

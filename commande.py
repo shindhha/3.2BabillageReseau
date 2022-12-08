@@ -19,6 +19,7 @@ def reception(client):
     global s
     while True:
         (reponse,client.coord_S) = s.recvfrom(1024) # reception des message en provenence du serveur
+        print ('passage')
     
         phrase = reponse.decode() # recupere la reponse envoyé par le serveur
         verif = cryptage.decrypter(phrase, client.clefTemporaire)
@@ -39,12 +40,23 @@ def reception(client):
             client.clef = client.clefTemporaire
             print("modification de la clef avec succès")
 
-            verif = cryptage.decrypter(phrase,client.clefTemporaire)
+        verif = cryptage.decrypter(phrase,client.clefTemporaire)
         if (verif[len(phrase) - 2] + verif[len(phrase) - 1] == 'T3'): # verification commande de supression de clef bien exécuté
             client.clef = None
             print("suppression de le clef avec succès")
         elif (verif[len(phrase) - len(client.nomArbitre) : len(phrase) - 1] == client.nomArbitre):
             print("echec de la supression de la clef")
+        
+        print (phrase)
+        veirf = cryptage.decrypter(phrase,client.clef)
+        tabPartieA = verif.split(',')
+        print (tabPartieA)
+        if (len(tabPartieA) > 3 and tabPartieA[2] == 'T4'): # verification reception de la clef de session
+
+            client.ks = tabPartieA[3]
+            longeurPartieA = len(tabPartieA[0]) + len(tabPartieA[1]) + len(tabPartieA[2]) + len(tabPartieA[3]) + 4 # recuperation de la longeur de la partie coder avec la clef de A
+            print (verif[0:longeurPartieA])
+             #TODO renvoyer message a B, receptionner sa reponse et mettre en place la connexion.
 
 
 def t1(client):
@@ -100,10 +112,5 @@ def t4(client):
         s.sendto(message.encode(),client.coord_S) # envoie du message au serveur
 
         print("En attente de verification .....")
-        (reponse, client.coord_S) = s.recvfrom(1024) # reception de la reponse du serveur
-
-        tabReponse = cryptage.decrypter(reponse.decode(),client.clef).split(',') # decryptage de la reponse
-        if (tabReponse[2] == 'T4'): #verificaton commande bien exécuté
-            client.ks = tabReponse[3]
-            s.sendto(tabReponse[4].encode,client.coord_S)
-            #TODO fonction bloquante recv, reception message userB et envoie confirm serveur
+    else : 
+        print ("votre clef n'est pas initialisé")
