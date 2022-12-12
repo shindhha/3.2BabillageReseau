@@ -69,11 +69,14 @@ def decrypter(phrase,clef):
 
 def clefSession(clef1,clef2):
     ks = '' # initialisation de la clef de session
-    longeurClef = random.randint(len(clef1), len(clef2))
+    if (len(clef1) > len(clef2)): 
+        longeurClef = random.randint(len(clef2), len(clef1)) # creation de la longeur de la cle de session
+    else :
+        longeurClef = random.randint(len(clef1), len(clef2))
     for i in range(longeurClef):
-        choixClef = random.randint(1,2)
+        choixClef = random.randint(1,2) # tirage de la cle a utiliser pour le caractere de rang i
         if (choixClef == 1):
-            ks += clef1[random.randint(1,len(clef1) - 1)]
+            ks += clef1[random.randint(1,len(clef1) - 1)] # si clef 1 tiré alors choix du caractere de clef 1 a utilise pour ajouter a la cle de session
         else:
-            ks += clef2[random.randint(1,len(clef2) - 1)]
+            ks += clef2[random.randint(1,len(clef2) - 1)] # si clef 2 tiré alors choix du caractere de clef 2 a utilise pour ajouter a la cle de session
     return ks

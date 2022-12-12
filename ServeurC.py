@@ -93,10 +93,12 @@ if __name__ == "__main__":
             recept = cryptage.decrypter(message[longeur:len(message)],cleUtilisateur(selectUtilisateurPort(port))) # decodage du message avec la clef de l'utilisateur
             receptComm = cryptage.decrypter(message,cleUtilisateur(selectUtilisateurPort(port)))
             print (message)
-            print(message[longeur:len(message)])
-            print (recept)
-            print (recept[0] + recept[ 1])
+            # print(message[longeur:len(message)])
+            print (receptComm)
+            print (receptComm[len(message) - 2] + receptComm[len(message) - 1])
+            # print (recept[0] + recept[ 1])
             print (cleUtilisateur(selectUtilisateurPort(port)))
+            print ('------------------------')
         else :
             longeur = None
 
@@ -121,7 +123,9 @@ if __name__ == "__main__":
                 nvMessage = partie1 + partie2 # assemblage des 2 partie
                 tab = nvMessage.split(',') # decoupage du message sous forme de tableau en fonction des virgules
 
-                modif(tab[4],tab[0])
+                afficherBd()
+                modif(tab[4],tab[0].upper())
+                afficherBd()
 
                 aEnvoyer = cryptage.crypter(tab[0] + ',' + tab[1] + ',T2',tab[4]) # creation message de validation
             except Exception as e:
@@ -156,9 +160,12 @@ if __name__ == "__main__":
             print (tab[2])
             clefCorrespondant = cleUtilisateur(tab[2]) # recuperation de la clef de l'utilsateur B
             print('cle B :' + str(clefCorrespondant))
+            print (len(clefCorrespondant))
+            print ('---')
             print (tab[0])
             clefEnvoyeur = cleUtilisateur(tab[0]) # recuperation de la clef de l'utilisateur A
             print ('cle ok :' + str(clefEnvoyeur))
+            print (len(clefEnvoyeur))
 
             if (clefCorrespondant != None):
 

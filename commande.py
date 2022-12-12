@@ -23,7 +23,12 @@ def reception(client):
     
         phrase = reponse.decode() # recupere la reponse envoyé par le serveur
         verif = cryptage.decrypter(phrase, client.clefTemporaire)
+
+
+        if (phrase[len(phrase)-2] +  phrase[len(phrase) - 1] == 'T0'): # recuperation du message d'erreur en cas de problemes sur le serveur
+            print (phrase[0:len(phrase) - 2])
         
+
         if (phrase[len(phrase) - 2] + phrase[len(phrase) - 1] == 'T1'): # verification commande d'ajout de la clé effectuer
             print ("echec de l'ajout de la clé")
         elif (verif[len(phrase) - 2] + verif[len(phrase) - 1] == 'T1'): # verification cas echec ajout de la clé
@@ -48,14 +53,15 @@ def reception(client):
             print("echec de la supression de la clef")
         
         print (phrase)
-        veirf = cryptage.decrypter(phrase,client.clef)
+        if (client.clef != None):
+            veirf = cryptage.decrypter(phrase,client.clef)
         tabPartieA = verif.split(',')
         print (tabPartieA)
         if (len(tabPartieA) > 3 and tabPartieA[2] == 'T4'): # verification reception de la clef de session
 
             client.ks = tabPartieA[3]
             longeurPartieA = len(tabPartieA[0]) + len(tabPartieA[1]) + len(tabPartieA[2]) + len(tabPartieA[3]) + 4 # recuperation de la longeur de la partie coder avec la clef de A
-            print (verif[0:longeurPartieA])
+            s.sendto(verif[longeurPartieA:len(verif)].encode(),client.coord_S)
              #TODO renvoyer message a B, receptionner sa reponse et mettre en place la connexion.
 
 

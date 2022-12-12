@@ -3,7 +3,7 @@ import commande
 import threading
 
 class Client:
-    def __init__(self, nom):
+    def __init__(self, nom): # constructeur du client
         self.nom = nom
         self.nomArbitre = 'C'
         self.clef = None
@@ -17,9 +17,22 @@ class Client:
 
 
 def creation():
-    nom = input("entrez votre nom :")
+    ok = True
+    while True: # verification nom sans virgule
+        nom = input("entrez votre nom :")
+        for i in nom:
+            if (i == ','):
+                print('votre nom ne doit pas contenir de virgule')
+                ok = False
+                break
+            else :
+                ok = True
+        if (ok):
+            break
+
     user = Client(nom)
     return user
+
 
 def menu(user):
     ok = True
