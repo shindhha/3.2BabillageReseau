@@ -13,6 +13,8 @@ for i in range(27,37):
 lettres[37] = ','
 lettres[38] = '-'
 lettres[39] = '.'
+lettres[40] = '?'
+lettres[41] = '!'
 
 def cleOk(clef):
     clef = clef.upper()
@@ -23,6 +25,18 @@ def cleOk(clef):
                 ok =True
                 break
         if (not ok):
+            return False
+    return True
+
+def messageOk(message):
+    message = forme(message) # formalisation du message
+    for i in message:
+        ok = False
+        for n in range (len(lettres)): # comparaison de la lettre du message avec toute les lettres de notre alphabet
+            if (i == lettres.get(n)): # lettres du message presente dans l'alphabet
+                ok = True
+                break
+        if (not ok): # boucle finis sans trouvez la lettres dans l'alphabet
             return False
     return True
 

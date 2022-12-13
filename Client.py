@@ -8,11 +8,13 @@ class Client:
         self.nomArbitre = 'C'
         self.clef = None
         self.ks = None
+        self.nomConnection = None
         self.coord_S = ('127.0.0.1', 12345)
         self.coordonee = None
         self.port = None
         self.clefTemporaire = None
         self.recevoir = threading.Thread(target=commande.reception, args = (self,))
+        self.menu = threading.Thread(target = menu, args = (self,))
         
 
 
@@ -57,6 +59,7 @@ def menu(user):
             ok = False
         else:
             print("veuillez entrez un nombre valide")
+    user.menu.close()
 
 
 if __name__ == "__main__":
@@ -64,4 +67,4 @@ if __name__ == "__main__":
     user = creation()
     commande.relierSocket(user)
     user.recevoir.start()
-    menu(user)
+    user.menu.start()
