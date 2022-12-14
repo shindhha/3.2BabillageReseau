@@ -17,8 +17,8 @@ def relierSocket (client):
 
 def reception(client):
     global s
-    while True:
-        (reponse,client.coord_S) = s.recvfrom(1024) # reception des message en provenence du serveur
+    while client.go:
+        (reponse,client.coord_Serveur) = s.recvfrom(1024) # reception des message en provenence du serveur
     
         phrase = reponse.decode() # recupere la reponse envoyé par le serveur
         verif = cryptage.decrypter(phrase, client.clefTemporaire)
@@ -27,16 +27,23 @@ def reception(client):
         if (client.ks != None): 
             verif = cryptage.decrypter(phrase,client.ks)
             if (verif == 'T5'):
-                print ('vous etes connectez a ' + client.nomConnection)
+                print ('vous etes connectez a ' + client.destinataire)
             elif (verif == 'T0'):
-                print (client.nomConnection + 'a refuser votre demande de communication')
+                print (client.destinataire + ' a refuser votre demande de communication')
                 client.ks = None
-                client.nomConnection = None
-            elif (verif[len(phrase) - 2] + verif[len(phrase) - 1] == 'T6'):
-                print ('Vous avez un nouveau message de ' + client.nomConnection + " :")
-                print (verif[0:len(phrase) - 2])
+                client.destinataire = None
+            elif (verif[len(phrase) - 2] + verif[len(phrase) - 1] == 'T6'): # reception du message du correspondant 
+                if (verif[0:len(phrase) - 2] == 'FIN'): # verification si demande de fin de communication 
+                    print (client.destinataire + ' a mit fin a la discussion')
+                    client.destinataire = None
+                    client.ks = None
+                else: # sinon affichage du message recu
+                    print ('Vous avez un nouveau message de ' + client.destinataire + " :")
+                    print (verif[0:len(phrase) - 2])
 
         if (phrase[len(phrase)-2] +  phrase[len(phrase) - 1] == 'T0'): # recuperation du message d'erreur en cas de problemes sur le serveur
+            client.ks = None
+            client.destinataire = None
             print (phrase[0:len(phrase) - 2])
 
         if (phrase[len(phrase) - 2] + phrase[len(phrase) - 1] == 'T1'): # verification commande d'ajout de la clé effectuer
@@ -45,14 +52,14 @@ def reception(client):
             client.clef = client.clefTemporaire
             print("ajout de la clef avec succès")
 
-        
-        verifvraie = cryptage.decrypter(phrase,client.clefTemporaire)
-        veriffaux = cryptage.decrypter(phrase,client.clef)
-        if (verifvraie[len(phrase) - 2] + verifvraie[len(phrase) - 1] == 'T2'): # verification commande de modification de clé bien exécuté
-            client.clef = client.clefTemporaire
-            print("modification de la clef avec succès")
-        elif (veriffaux[len(phrase) - 2] + veriffaux[len(phrase) - 1] == 'T2'): 
-            print ("echec de la modification de la clé")
+        if (client.clef != None):
+            verifvraie = cryptage.decrypter(phrase,client.clefTemporaire)
+            veriffaux = cryptage.decrypter(phrase,client.clef)
+            if (verifvraie[len(phrase) - 2] + verifvraie[len(phrase) - 1] == 'T2'): # verification commande de modification de clé bien exécuté
+                client.clef = client.clefTemporaire
+                print("modification de la clef avec succès")
+            elif (veriffaux[len(phrase) - 2] + veriffaux[len(phrase) - 1] == 'T2'): 
+                print ("echec de la modification de la clé")
         
 
         verif = cryptage.decrypter(phrase,client.clefTemporaire)
@@ -69,7 +76,7 @@ def reception(client):
             try:
                 client.ks = tabPartieA[3]
                 longeurPartieA = len(tabPartieA[0]) + len(tabPartieA[1]) + len(tabPartieA[2]) + len(tabPartieA[3]) + 4 # recuperation de la longeur de la partie coder avec la clef de A
-                s.sendto(verif[longeurPartieA:len(verif)].encode(),client.coord_S)
+                s.sendto(verif[longeurPartieA:len(verif)].encode(),client.coord_Serveur)
             except Exception as e:
                 raise e
 
@@ -90,15 +97,14 @@ def reception(client):
 
             if (reponse == 'oui'):
                 client.ks = tableau[3]
-                client.nomConnection = tableau[1]
+                client.destinataire = tableau[1]
                 confirmation = cryptage.crypter(client.nom + ',' + tableau[1] + ',T5',client.ks) # codage du message d'aceptation de communication
-                s.sendto(confirmation.encode(),client.coord_S)
+                s.sendto(confirmation.encode(),client.coord_Serveur)
             else:
                 client.ks = None
-                client.nomConnection = None
+                client.destinataire = None
                 confirmation = cryptage.crypter('T0',tableau[3]) #codage du message de refus de communicaton
-                s.sendto(confirmation.encode(),client.coord_S)
-
+                s.sendto(confirmation.encode(),client.coord_Serveur)
 
 def t1(client):
     global s
@@ -110,7 +116,7 @@ def t1(client):
             message = client.nom + ',' + client.nomArbitre + ',T1,' + nouvelleClef # creation du message de création d'une clé
             client.clefTemporaire = nouvelleClef
 
-            s.sendto(message.encode(), client.coord_S) # envoie du message au serveur
+            s.sendto(message.encode(), client.coord_Serveur) # envoie du message au serveur
 
             print("En attente de verification .....")
 
@@ -124,8 +130,7 @@ def t2(client):
         nouvelleClef = input('entrez la nouvelle clef: ')
         client.clefTemporaire = nouvelleClef
         message = client.nom + ',' + client.nomArbitre + ',' + cryptage.crypter("T2," + client.clef + "," + nouvelleClef,client.clef) # creation du message de modification de la clé
-        s.sendto(message.encode(), client.coord_S) # envoie du message au serveur
-
+        s.sendto(message.encode(), client.coord_Serveur) # envoie du message au serveur
 
         print("En attente de verification .....")
 
@@ -138,7 +143,7 @@ def t3(client):
     global s
     if (client.clef != None):
         message = client.nom + ',' + client.nomArbitre + ',' + cryptage.crypter('T3,' + client.clef, client.clef) # creation du message de suppression de la clé
-        s.sendto(message.encode(),client.coord_S) # envoie du message au serveur
+        s.sendto(message.encode(),client.coord_Serveur) # envoie du message au serveur
 
         print("En attente de verification .....")
         
@@ -149,18 +154,18 @@ def t3(client):
 def t4(client):
     global s
     if (client.clef != None):
-        if (client.nomConnection == None):
+        if (client.destinataire == None):
             utilisateurB = input('entrez le nom de l\'utilisateur avec qui comuniquer: ')
             message = cryptage.crypter(client.nom + ',' + client.nomArbitre + ',' + utilisateurB + ',T4',client.clef) #creation du message de demande de communication avec un utilisateur
-            s.sendto(message.encode(),client.coord_S) # envoie du message au serveur
-            client.nomConnection = utilisateurB
+            s.sendto(message.encode(),client.coord_Serveur) # envoie du message au serveur
+            client.destinataire = utilisateurB
 
             print("En attente de verification .....")
         else:
-            message = input('entrez le message que vous souhaitez envoyé a votre correspondant : \n')
+            message = input('entrez le message que vous souhaitez envoyé a votre correspondant (entrez \'fin\' pour mettre fin a la communication) : \n')
             if (cryptage.messageOk(message)):
                 message = cryptage.crypter(message + 'T6',client.ks)
-                s.sendto(message.encode(),client.coord_S)
+                s.sendto(message.encode(),client.coord_Serveur)
                 print ('Message envoyé !!')
             else:
                 print('Votre message contient des caractere speciaux non traités, il n\'as pas été envoyé')

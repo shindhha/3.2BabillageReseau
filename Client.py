@@ -8,13 +8,14 @@ class Client:
         self.nomArbitre = 'C'
         self.clef = None
         self.ks = None
-        self.nomConnection = None
-        self.coord_S = ('127.0.0.1', 12345)
+        self.destinataire = None
+        self.coord_Serveur = ('127.0.0.1', 12345)
         self.coordonee = None
         self.port = None
         self.clefTemporaire = None
-        self.recevoir = threading.Thread(target=commande.reception, args = (self,))
+        self.recevoir = threading.Thread(target = commande.reception, args = (self,))
         self.menu = threading.Thread(target = menu, args = (self,))
+        self.go = True
         
 
 
@@ -37,8 +38,7 @@ def creation():
 
 
 def menu(user):
-    ok = True
-    while ok:
+    while user.go:
         demande = input("\nque voulez vous faire ?"
                         + "\n1 - ajouter une clef"
                         + "\n2 - modifier une clef"
@@ -56,7 +56,7 @@ def menu(user):
             commande.t4(user)
         elif (demande == '5'):
             print ("Au revoir!")
-            ok = False
+            user.go = False
         else:
             print("veuillez entrez un nombre valide")
     user.menu.close()
