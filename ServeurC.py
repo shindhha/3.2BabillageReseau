@@ -14,13 +14,21 @@ def initDb():
         cursor.execute(""" CREATE TABLE clefs (nom TEXT, clef TEXT, ip TEXT, port TEXT,ks TEXT,destinataire TEXT, CONSTRAINT pk_clefs PRIMARY KEY (nom)) """) # requete de creation de la table
         connectionBd.close() # deconnection de la base
 
+def refreshBd():
+    connectionBd = sqlite3.connect(cheminBd)
+    cursor = connectionBd.cursor()
+    cursor.execute("DROP TABLE clefs") # supression de la table
+    cursor.execute(""" CREATE TABLE clefs (nom TEXT, clef TEXT, ip TEXT, port TEXT,ks TEXT,destinataire TEXT, CONSTRAINT pk_clefs PRIMARY KEY (nom)) """) # requete de creation de la table
+    connectionBd.commit()
+    connectionBd.close()
 
-def ajout(nom,cle,connection):
+
+def ajoutClef(nom,cle,connection):
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
     ip = connection[0] # separation de l'IP et du PORT dans la connection
     port = connection[1]
-    cursor.execute("INSERT INTO clefs VALUES (?,?,?,?,NULL,NULL)", (nom,cle,ip,port,)) # si pas créer creation de l'utilisateur et ajout de sa clef
+    cursor.execute("INSERT INTO clefs VALUES (?,?,?,?,NULL,NULL)", (nom,cle,ip,port,)) # si pas créer creation de l'utilisateur et ajout de sa clef 
     connectionBd.commit()
     connectionBd.close()
 
@@ -48,7 +56,7 @@ def afficherBd():
     print (lignes.fetchall())
 
 
-def cleUtilisateur(utilisateur):
+def selectCleUtilisateur(utilisateur):
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
     cle = cursor.execute(" SELECT clef FROM clefs WHERE nom = (?) ", ( utilisateur,)) #selection de l'ip et du port d'un utilisateur donnée
@@ -81,7 +89,7 @@ def selectUtilisateurPort(port) :
     connectionBd.close()
 
 
-def connectionUtilisateur(nom) :
+def selectConnectionUtilisateur(nom) :
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
     connection = cursor.execute("SELECT ip, port FROM clefs Where nom = (?)",(nom,))
@@ -113,7 +121,7 @@ def suprimerKsDestinataire(nom) :
     connectionBd.close()
 
 
-def recupererDestinataire(nom) :
+def selectDestinataire(nom) :
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
     connection = cursor.execute("SELECT destinataire FROM clefs WHERE nom = (?)",(nom,))
@@ -125,7 +133,7 @@ def recupererDestinataire(nom) :
         return None
     connectionBd.close()
 
-def recupererKs(nom) :
+def selectKs(nom) :
     connectionBd = sqlite3.connect(cheminBd)
     cursor = connectionBd.cursor()
     connection = cursor.execute("SELECT ks FROM clefs WHERE nom = (?)",(nom,))
@@ -155,6 +163,10 @@ if __name__ == "__main__":
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     coordServeur = ('127.0.0.1',12345)
     s.bind(coordServeur)
+    suppressionDonnées = input('voulez vous remettre la base de données a zéro ? (entrez oui pour confirmer) :')
+
+    if (suppressionDonnées == 'oui'):
+        refreshBd()
     
 
     while True:
@@ -165,20 +177,20 @@ if __name__ == "__main__":
         message = message.decode() # recuperation du message reçu 
         if (selectUtilisateurPort(port) != None): #verification utilisateur deja créer ou premiere connection
             longeur = len (selectUtilisateurPort(comm[1])) + len(nomArbitre) + 2 # longeur du message avant type (avant t1 t2 ou t3)
-            recept = cryptage.decrypter(message[longeur:len(message)],cleUtilisateur(selectUtilisateurPort(port))) # decodage du message avec la clef de l'utilisateur
-            receptComm = cryptage.decrypter(message,cleUtilisateur(selectUtilisateurPort(port)))
+            recept = cryptage.decrypter(message[longeur:len(message)],selectCleUtilisateur(selectUtilisateurPort(port))) # decodage du message avec la clef de l'utilisateur
+            receptComm = cryptage.decrypter(message,selectCleUtilisateur(selectUtilisateurPort(port)))
         else :
             longeur = None
         if (verifierConnection(comm)):
 
-            verif = cryptage.decrypter(message,recupererKs(selectUtilisateurPort(comm[1]))) # decryptage du message envoyé avec la clé ks
+            verif = cryptage.decrypter(message,selectKs(selectUtilisateurPort(comm[1]))) # decryptage du message envoyé avec la clé ks
 
             envoyeur = selectUtilisateurPort(comm[1]) # recuperation du nom de l'envoyeur
-            destinataire = recupererDestinataire(envoyeur) # recuperation du nom du destinataire du message
-            connectionDestinataire = connectionUtilisateur(destinataire) # recuperation de 'adresse IP et du port du destinataire
+            destinataire = selectDestinataire(envoyeur) # recuperation du nom du destinataire du message
+            connectionDestinataire = selectConnectionUtilisateur(destinataire) # recuperation de 'adresse IP et du port du destinataire
 
             if (verif[len(message) - 2] + verif[len(message) - 1] == 'T5'): # verification acceptation de la connexion par B
-                aEnvoyer = cryptage.crypter('T5',recupererKs(selectUtilisateurPort(comm[1])))
+                aEnvoyer = cryptage.crypter('T5',selectKs(selectUtilisateurPort(comm[1])))
                 s.sendto(aEnvoyer.encode(),connectionDestinataire)
 
             elif(verif == 'T0'): # verification refus de la connexion par B
@@ -195,12 +207,14 @@ if __name__ == "__main__":
         if (longeur == None): # verification de la requette reçu
             try :
                 tab = message.split(',')
-                ajout(tab[0].upper(),tab[3].upper(),comm)
+                ajoutClef(tab[0].upper(),tab[3].upper(),comm)
                 aEnvoyer = cryptage.crypter(nomArbitre + ',' + tab[0] + ',T1',tab[3]) # creation du message de validation a envoyer dans le cas ou l'instruction est passé  
 
-            except Exception as e:
-                raise e
+            except sqlite3.IntegrityError as e:
                 aEnvoyer = nomArbitre + ',' + tab[0] + ',T1' # creation du message d'echec de l'ajout
+                s.sendto('ce nom d utilisateur est deja utiliser, veuillez en choisir un autre,T0'.encode(),comm )
+            except Exception:
+                aEnvoyer = nomArbitre + ',' + tab[0] + ',T1'
 
             s.sendto(aEnvoyer.encode(),comm) # envoie du message de validation
 
@@ -208,7 +222,7 @@ if __name__ == "__main__":
         elif (len(recept) >= 2 and recept[0] + recept[1] == 'T2'):
             try:
                 partie1 = message[0:longeur] # selection premiere partie du message non crypter
-                partie2 = cryptage.decrypter(message[longeur:len(message)],cleUtilisateur(selectUtilisateurPort(port))) # selcetion second partie du message + decryptage avec ancenne clef utilisateur
+                partie2 = cryptage.decrypter(message[longeur:len(message)],selectCleUtilisateur(selectUtilisateurPort(port))) # selcetion second partie du message + decryptage avec ancenne clef utilisateur
                 nvMessage = partie1 + partie2 # assemblage des 2 partie
                 tab = nvMessage.split(',') # decoupage du message sous forme de tableau en fonction des virgules
 
@@ -223,7 +237,7 @@ if __name__ == "__main__":
         elif (len(recept) >= 2 and recept[0] + recept[1] == 'T3'):
             try:
                 partie1 = message[0:longeur] # selection premiere partie du message non crypter
-                partie2 = cryptage.decrypter(message[longeur:len(message)],cleUtilisateur(selectUtilisateurPort(port))) # selcetion second partie du message + decryptage avec ancenne clef utilisateur
+                partie2 = cryptage.decrypter(message[longeur:len(message)],selectCleUtilisateur(selectUtilisateurPort(port))) # selcetion second partie du message + decryptage avec ancenne clef utilisateur
                 nvMessage = partie1 + partie2 # assemblage des 2 partie
                 tab = nvMessage.split(',') # decoupage du message sous forme de tableau en fonction des virgules
                 
@@ -241,24 +255,27 @@ if __name__ == "__main__":
 
             tab = receptComm.split(',')
 
-            clefCorrespondant = cleUtilisateur(tab[2]) # recuperation de la clef de l'utilsateur B
-            clefEnvoyeur = cleUtilisateur(tab[0]) # recuperation de la clef de l'utilisateur A
+            clefCorrespondant = selectCleUtilisateur(tab[2]) # recuperation de la clef de l'utilsateur B
+            clefEnvoyeur = selectCleUtilisateur(tab[0]) # recuperation de la clef de l'utilisateur A
+            discusssionCorrespondant = selectDestinataire(tab[0]) # verification si le correspondant est deja en discusssion avec quelqu'un
 
-            if (clefCorrespondant != None):
+            if (clefCorrespondant != None): # verrification correspondant existant
+                if (discusssionCorrespondant == None): #verification que le correspondant n'est pas deja en discussion avec quelqu'un d'autre
+                    ks = cryptage.clefSession(clefEnvoyeur,clefCorrespondant) # creation de la clef de session pour la communication
 
-                ks = cryptage.clefSession(clefEnvoyeur,clefCorrespondant) # creation de la clef de session pour la communication
+                    # creation du message de confirmation de creation de ks
+                    aEnvoyer = cryptage.crypter(tab[1] + ',' + tab[0] + ',T4,' + ks + ',' + cryptage.crypter(tab[1] + ',' + tab[0] + ',' + tab[2] + ',' + ks, clefCorrespondant),clefEnvoyeur )
 
-                # creation du message de confirmation de creation de ks
-                aEnvoyer = cryptage.crypter(tab[1] + ',' + tab[0] + ',T4,' + ks + ',' + cryptage.crypter(tab[1] + ',' + tab[0] + ',' + tab[2] + ',' + ks, clefCorrespondant),clefEnvoyeur )
+                    modifKsDestinataire(tab[0],ks,tab[2]) # creation d'une possible connection entre utilisateur A (tab[0]) et l'utilisateur B (tab[2]) pour l'utilisateur A
+                    modifKsDestinataire(tab[2],ks,tab[0]) # creation d'une possible connection entre utilisateur A (tab[0]) et l'utilisateur B (tab[2]) pour l'utilisateur B
 
-                modifKsDestinataire(tab[0],ks,tab[2]) # creation d'une possible connection entre utilisateur A (tab[0]) et l'utilisateur B (tab[2]) pour l'utilisateur A
-                modifKsDestinataire(tab[2],ks,tab[0]) # creation d'une possible connection entre utilisateur A (tab[0]) et l'utilisateur B (tab[2]) pour l'utilisateur B
+                    s.sendto(aEnvoyer.encode(),comm)
 
-                s.sendto(aEnvoyer.encode(),comm)
-
-                connectionB = connectionUtilisateur(tab[2]) # recuperation de la connection a l'utilisateur B
-                (message,comm) = s.recvfrom(1024) # recuperation de la second partie du message a envoyer a B
-                s.sendto(message,connectionB)
+                    connectionB = selectConnectionUtilisateur(tab[2]) # recuperation de la connection a l'utilisateur B
+                    (message,comm) = s.recvfrom(1024) # recuperation de la second partie du message a envoyer a B
+                    s.sendto(message,connectionB)
+                else:
+                    s.sendto('le correspondant discute deja avec quelqu\'un,T0'.encode(),comm)
 
             else:
                 s.sendto('correspondant inexistant,T0'.encode(),comm)
