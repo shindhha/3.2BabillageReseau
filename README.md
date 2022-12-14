@@ -1,8 +1,8 @@
 # 3.2BabillageReseau
 # FR
-#Description
+# Description
 logiciel de discussion qui permet de communiquer entre deux utilisateurs par l'intermediaire d'un serveur commun
-#Rôles
+# Rôles
 Laurie Clément -> Dévellopeur <br/>
 Lala Antoine -> Dévellopeur/Product owner/Scrum master <br/>
 Medard Guillaume -> Dévellopeur/Maquettiste <br/>
