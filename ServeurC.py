@@ -171,7 +171,7 @@ if __name__ == "__main__":
 
     while True:
 
-        (message,comm) = s.recvfrom(1024)
+        (message,comm) = s.recvfrom(2048)
         ip = comm[0]
         port = comm[1]
         message = message.decode() # recuperation du message reçu 
@@ -199,10 +199,11 @@ if __name__ == "__main__":
                 suprimerKsDestinataire(destinataire)
 
             elif (verif[len(message) - 2] + verif[len(message) - 1] == 'T6'): # verification message a transmettre a l'utilisateur avec lequel l'envoyeur est connecter
+                if (verif[0:len(message) - 2] == 'FIN'):
+                    suprimerKsDestinataire(envoyeur)
+                    suprimerKsDestinataire(destinataire)
                 s.sendto(message.encode(),connectionDestinataire)
-
-
-
+                
 
         if (longeur == None): # verification de la requette reçu
             try :
@@ -275,7 +276,7 @@ if __name__ == "__main__":
                     (message,comm) = s.recvfrom(1024) # recuperation de la second partie du message a envoyer a B
                     s.sendto(message,connectionB)
                 else:
-                    s.sendto('le correspondant discute deja avec quelqu\'un,T0'.encode(),comm)
+                    s.sendto('le correspondant discute deja avec quelqu un,T0'.encode(),comm)
 
             else:
                 s.sendto('correspondant inexistant,T0'.encode(),comm)

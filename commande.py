@@ -18,7 +18,7 @@ def relierSocket (client):
 def reception(client):
     global s
     while client.go:
-        (reponse,client.coord_Serveur) = s.recvfrom(1024) # reception des message en provenence du serveur
+        (reponse,client.coord_Serveur) = s.recvfrom(2048) # reception des message en provenence du serveur
     
         phrase = reponse.decode() # recupere la reponse envoyé par le serveur
         verif = cryptage.decrypter(phrase, client.clefTemporaire)
@@ -164,9 +164,17 @@ def t4(client):
         else:
             message = input('entrez le message que vous souhaitez envoyé a votre correspondant (entrez \'fin\' pour mettre fin a la communication) : \n')
             if (cryptage.messageOk(message)):
-                message = cryptage.crypter(message + 'T6',client.ks)
+                if (message == 'fin'):
+                    message = cryptage.crypter(message + 'T6',client.ks)
+                    print('arret de la connection')
+                    client.ks = None
+                    client.destinataire = None
+                    print ()
+                else:
+                    message = cryptage.crypter(message + 'T6',client.ks)
+                    print ('Message envoyé !!')
                 s.sendto(message.encode(),client.coord_Serveur)
-                print ('Message envoyé !!')
+                    
             else:
                 print('Votre message contient des caractere speciaux non traités, il n\'as pas été envoyé')
     else: 

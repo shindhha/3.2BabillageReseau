@@ -15,6 +15,8 @@ lettres[38] = '-'
 lettres[39] = '.'
 lettres[40] = '?'
 lettres[41] = '!'
+lettres[42] = ':'
+lettres[43] = ';'
 
 def cleOk(clef):
     clef = clef.upper()
@@ -45,8 +47,8 @@ def forme(phrase):
     phrase = phrase.replace('é','e')
     phrase = phrase.replace('è','e')
     phrase = phrase.replace('à','a')
-    phrase = phrase.replace('ù','u')
     phrase = phrase.replace('â','a')
+    phrase = phrase.replace('ù','u')
     phrase = phrase.replace('ï','i')
     phrase = phrase.replace('ê','e')
     phrase = phrase.replace('ô','o')
