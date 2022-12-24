@@ -41,12 +41,12 @@ def connexion():
     return name
 
 
-def menu_principal(msg_info):
+def menu_principal(client, msg_info):
     """
     Fonction qui affiche la fenêtre principale de l'application
     :return:
     """
-    fenetre = Windows.Menu(msg_info)
+    fenetre = Windows.Menu(client, msg_info)
     action = fenetre.show()
     return action
 
@@ -124,7 +124,7 @@ def actions():
     end = False
     msg_info = ''
     while not end:
-        action = menu_principal(msg_info)
+        action = menu_principal(utilisateur, msg_info)
         msg_info = ''
 
         if action == 'quit':
