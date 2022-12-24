@@ -87,10 +87,14 @@ def creation_cle(update=False):
             else:
                 # La clé est valide, envoi au serveur
                 utilisateur.temp_cle = cle
-                arbitre_ok = Communicate.create_key(utilisateur)
+                if not update:
+                    arbitre_ok = Communicate.create_key(utilisateur)
+                else:
+                    arbitre_ok = Communicate.edit_key(utilisateur)
                 print("Réponse de l'arbitre : ", arbitre_ok)
                 if arbitre_ok:
                     utilisateur.cle = cle
+                    utilisateur.temp_cle = None
                     end = True
                     retour = True
                 else:
@@ -119,6 +123,8 @@ def actions():
 
         elif action == 'editKey':
             print('Modification de la clé')
+            if creation_cle(update=True):
+                msg_info = 'Clé modifiée avec succès'
 
         elif action == 'delKey':
             print('Suppression de la clé')

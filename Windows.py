@@ -161,5 +161,9 @@ class Menu:
                 end = True
                 action = 'createKey'
 
+            if event == 'btn_editKey':
+                end = True
+                action = 'editKey'
+
         self.window.close()
         return action
