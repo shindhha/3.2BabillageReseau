@@ -124,6 +124,23 @@ class ConnectWindow:
         return name
 
 
+class InfoWindow():
+    """
+    InfoWindow - Fenêtre préconfigurée pour simplement afficher un message
+    """
+    def __init__(self, title, text):
+        self.layout = [
+            [sg.Text(text)],
+            [sg.Button('Ok', key='btn_ok')]
+        ]
+        self.window = sg.Window(title, self.layout, finalize=True, scaling=scaling)
+
+    def show(self):
+        event, values = self.window.read()
+        self.window.close()
+        return event, values
+
+
 class Menu:
     """
     Menu - Fenêtre principale de l'application
@@ -164,6 +181,10 @@ class Menu:
             if event == 'btn_editKey':
                 end = True
                 action = 'editKey'
+
+            if event == 'btn_delKey':
+                end = True
+                action = 'delKey'
 
         self.window.close()
         return action

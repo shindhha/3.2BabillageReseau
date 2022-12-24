@@ -1,7 +1,7 @@
 import Cryptage
 from multiprocessing import Queue
 
-status_list = ["idle", "createKey", "editKey"]
+status_list = ["idle", "createKey", "editKey", "deleteKey"]
 status = "idle"
 
 retour_infos = Queue()
@@ -50,6 +50,9 @@ def process_msg(queue, client):
             elif status == 'editKey':
                 process_edit_key(msg, client.temp_cle, client.cle)
 
+            elif status == 'deleteKey':
+                process_delete_key(msg, client.cle)
+
 
 
         else:
@@ -82,7 +85,7 @@ def process_create_key(msg, cle):
         La clé est valide si ce message est reçu en étant chiffré avec notre clé privée, sinon la clé n'a pas été
         acceptée par l'arbitre.
 
-    :param msg: Le message de connexion
+    :param msg: Le message reçus par le serveur
     :param cle: La clé saisie par l'utilisateur
     :return: None
     """
@@ -109,7 +112,7 @@ def process_edit_key(msg, nv_cle, ancienne_cle):
         La clé est valide si ce message est reçu en étant chiffré avec notre nouvelle clé privée, si le message
         est chiffré avec l'ancienne clé, la clé n'a pas été acceptée par l'arbitre.
 
-    :param msg: Le message de connexion
+    :param msg: Le message reçu par le serveur
     :param nv_cle: La nouvelle clé saisie par l'utilisateur
     :param ancienne_cle: L'ancienne clé saisie par l'utilisateur
     :return: None
@@ -123,6 +126,30 @@ def process_edit_key(msg, nv_cle, ancienne_cle):
     if decrypt_ancienne_cle == 'T2':
         retour_infos.put(False)
     elif decrypt_nv_cle == 'T2':
+        retour_infos.put(True)
+    else:
+        retour_infos.put(False)
+
+
+def process_delete_key(msg, cle):
+    """
+    Traite les messages reçus par le serveur à propos de la suppression de la clé et place les informations dans
+    la file retour_infos (True si la clé a été supprimée, False sinon)
+
+    INFO :
+        Format du message de succès : Eclef <Nom de l’arbitre, Nom utilisateur, T3>
+        Format du message d’échec : Eclef <Nom de l’arbitre, Nom utilisateur>
+
+    :param msg: Le message reçu par le serveur
+    :param cle: La clé saisie par l'utilisateur
+    :return: None
+    """
+
+    print('process_delete_key')
+
+    decrypt_cle = Cryptage.decrypter(msg, cle).split(',')[-1]
+
+    if decrypt_cle == 'T3':
         retour_infos.put(True)
     else:
         retour_infos.put(False)
@@ -173,3 +200,27 @@ def edit_key(client):
     client.socket.sendto(msg.encode(), client.addr_arbitre)
 
     return retour_infos.get()
+
+
+def delete_key(client):
+    """
+    Permet d'envoyer au serveur le message de suppression de clé.
+
+    INFO :
+        Format du msg envoyé : < Nom utilisateur, Nom de l’arbitre, Eclef <T3,clef privée>>.
+
+    :return: True si la clé a été supprimée, False sinon
+    """
+    set_status('deleteKey')
+    nom_utilisateur = client.nom
+    nom_arbitre = client.nom_arbitre
+    cle = client.cle
+
+    msg_crypt = "T3," + cle
+    msg_crypt = Cryptage.crypter(msg_crypt, cle)
+
+    msg = nom_utilisateur + ',' + nom_arbitre + ',' + msg_crypt
+    client.socket.sendto(msg.encode(), client.addr_arbitre)
+
+    return retour_infos.get()
+

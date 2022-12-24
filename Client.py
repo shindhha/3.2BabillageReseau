@@ -102,6 +102,20 @@ def creation_cle(update=False):
     return retour
 
 
+def supression_cle():
+    """
+    Fonction qui permet de supprimer la clé de l'utilisateur
+    :return: True si la clé a été supprimée, None sinon
+    """
+
+    code_retour = Communicate.delete_key(utilisateur)
+    if code_retour:
+        utilisateur.cle = None
+        return True
+    else:
+        Windows.ErrorWindow('La clé n\'a pas pu être supprimée').show()
+
+
 def actions():
     """
     Fonction qui gère les actions de l'utilisateur effectuées depuis la fenêtre principale
@@ -128,6 +142,8 @@ def actions():
 
         elif action == 'delKey':
             print('Suppression de la clé')
+            if supression_cle():
+                msg_info = 'Clé supprimée avec succès'
 
         elif action == 'communiquer':
             print('Communiquer')
