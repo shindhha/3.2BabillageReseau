@@ -17,12 +17,22 @@ class Utilisateur:
         self.cle = None
         self.temp_cle = None  # Contient la clé durant la phase de validation de la clé par l'arbitre
         self.nom = None
-        self.ks = None
 
         # --- Informations relatives à l'arbitre ---
         self.nom_arbitre = 'C'
-        self.addr_arbitre = ('localhost', 12345)
+        self.addr_arbitre = ('localhost', 5000)
 
+        # --- Informations relatives à la communication avec un tiers ---
+        self.nom_destinataire = None
+        self.ks = None
+        self.addr_destinataire = None
+
+        # --- Informations relatives au menu principal ---
+        self.main_menu = None
+        self.demande_connexion = False
+
+        # --- Informations relatives a la fenêtre de communication ---
+        self.communication_window = None
 
     def __del__(self):
         self._receiver.terminate()
@@ -46,8 +56,9 @@ def menu_principal(client, msg_info):
     Fonction qui affiche la fenêtre principale de l'application
     :return:
     """
-    fenetre = Windows.Menu(client, msg_info)
-    action = fenetre.show()
+    client.main_menu = Windows.Menu(client, msg_info)
+    action = client.main_menu.show()
+    client.main_menu = None
     return action
 
 
@@ -116,6 +127,57 @@ def supression_cle():
         Windows.ErrorWindow('La clé n\'a pas pu être supprimée').show()
 
 
+def demarrer_communication_initialisateur():
+    """
+    Permet de démarrer la communication avec un tiers en tant qu'initialisateur
+    :return: True si l'utilisateur a pu communiquer avec un tiers, False sinon
+    """
+
+    a_communique = False
+
+    # Demande du nom du destinataire
+    fenetre = Windows.SimpleInputWindow('Communiquer', 'Entrez le nom du destinataire :')
+    nom_destinataire = fenetre.show()
+    if nom_destinataire is not None:
+        utilisateur.nom_destinataire = nom_destinataire
+        # Demande à l'arbitre des coordonnées du destinataire
+        if Communicate.demander_coordonnees(utilisateur):
+            print("JAI LES COORDONNES")
+            # Demande à l'arbitre de la clé de session (KS)
+            if Communicate.demander_ks(utilisateur):
+                # L'arbitre a accepté la demande, on affiche la fenêtre de communication pendant que l'utilisateur B
+                # accepte la demande
+                utilisateur.communication_window = Windows.DiscussWindow(utilisateur)
+                utilisateur.communication_window.show_waiting_text()
+                a_communique = utilisateur.communication_window.show()
+
+                utilisateur.communication_window = None
+    return a_communique
+
+
+def rejoindre_communication():
+    """
+    Permet de rejoindre une communication qui a été initialisée par un autre utilisateur
+    :return: None
+    """
+    Communicate.set_status('discuss')
+    utilisateur.communication_window = Windows.DiscussWindow(utilisateur)
+    utilisateur.communication_window.show_welcome_text()
+    utilisateur.communication_window.enable_communication()
+    utilisateur.communication_window.show()
+
+    utilisateur.communication_window = None
+
+
+def accepter_refuser_demande():
+    """
+    Affiche la fenêtre permettant à l'utilisateur de répondre à une demande de communication
+    :return: True si l'utilisateur a accepté la demande, False sinon
+    """
+    fenetre = Windows.YesNoWindow('Demande de communication', 'Accepter la demande de communication emise par '
+                                  + utilisateur.nom_destinataire + ' ?')
+    return fenetre.show()
+
 def actions():
     """
     Fonction qui gère les actions de l'utilisateur effectuées depuis la fenêtre principale
@@ -147,6 +209,19 @@ def actions():
 
         elif action == 'communiquer':
             print('Communiquer')
+            if utilisateur.demande_connexion:
+                demande_ok = Windows.YesNoWindow('Demande de communication',
+                                                 'Accepter la demande de communication de '
+                                                 + utilisateur.nom_destinataire + ' ?').show()
+                Communicate.accepter_refuser_dialogue(utilisateur, demande_ok)
+                if demande_ok:
+                    rejoindre_communication()
+
+                utilisateur.demande_connexion = False
+
+            else:
+                if not demarrer_communication_initialisateur():
+                    msg_info = 'La communication a été refusée'
 
         else:
             print('Action inconnue')

@@ -1,4 +1,6 @@
 import PySimpleGUI as sg
+import multiprocessing
+import threading as th
 
 # Création du thème custom pour les fenêtres
 sg.LOOK_AND_FEEL_TABLE['CUSTOM_THEME'] = {"BACKGROUND": "#f0f0f0",
@@ -13,7 +15,7 @@ sg.LOOK_AND_FEEL_TABLE['CUSTOM_THEME'] = {"BACKGROUND": "#f0f0f0",
                                           "PROGRESS_DEPTH": 0, }
 sg.theme('CUSTOM_THEME')
 
-scaling = 1.5
+scaling = 3
 """
 Valeur de zoom des fenêtres. Recommandé: 1.5
 """
@@ -145,6 +147,128 @@ class InfoWindow():
         return event, values
 
 
+class DiscussWindow:
+    def __init__(self, client):
+        self.queue_recv = multiprocessing.Queue()
+        self.queue_send = multiprocessing.Queue()
+
+        self.client = client
+        self.__expediteur = client.nom
+        self.__destinataire = client.nom_destinataire
+
+        self.__start_thread()
+
+        self.__layout = [
+            [sg.Multiline(key='output', size=(50, 10), autoscroll=True, disabled=True)],
+            [sg.InputText(key='input', size=(52, 1), disabled=True)],
+            [sg.Button('Sortir', key='btn_quit'), sg.Push(), sg.Button('Envoyer', key='btn_send', disabled=True)]
+        ]
+        self.__window = sg.Window('Discussion', self.__layout, finalize=True, scaling=scaling)
+
+        # Variables liés à l'affichage des messages
+        self.__text_msg = self.__window['output']
+        self.__last_person = None
+
+    def show_waiting_text(self):
+        """
+        Permet d'afficher le texte par défaut dans la fenêtre de discussion
+        :return None
+        """
+        self.__text_msg.print('Bienvenue dans le salon de discussion !\n')
+        self.__text_msg.print('En attente de la confirmation de conversation avec ' + self.__destinataire + '...\n')
+
+    def show_welcome_text(self):
+        """
+        Permet d'afficher le texte de bienvenue dans la fenêtre de discussion
+        :return None
+        """
+        self.__text_msg.update(value='')  # Clear du texte
+        self.__text_msg.print('Bienvenue dans le salon de discussion !\n')
+        self.__text_msg.print('Vous êtes en conversation avec ' + self.__destinataire + '.\n')
+
+    def process_recv(self):
+        end = False
+        while not end:
+            msg = self.queue_recv.get()
+            if msg is not None:
+                self.__print_msg(self.__destinataire, msg)
+            else:
+                end = True
+
+    def __start_thread(self):
+        self.__rcv_process = th.Thread(target=self.process_recv)
+        self.__rcv_process.start()
+
+    def __print_msg(self, expediteur, msg):
+        """
+        Effectue la mise en forme des messages sur la fenêtre
+        :param expediteur: Permet l'affchage de l'expéditeur du message à afficher
+        :param msg: Permet l'affichage du message à afficher
+        """
+        if (self.__last_person != expediteur):
+            self.__text_msg.print('-'*65, justification='center')
+            self.__last_person = expediteur
+
+        self.__text_msg.print(expediteur + ' :', font=(sg.DEFAULT_FONT[0], sg.DEFAULT_FONT[1], 'underline'), end='') # end changé pour retirer le \n
+        self.__text_msg.print(' ' + msg)
+
+    def enable_communication(self):
+        """
+        Permet d'activer le bouton et l'input de communication
+        :return: None
+        """
+        self.__window['btn_send'].update(disabled=False)
+        self.__window['input'].update(disabled=False)
+
+    def show(self):
+        """
+        Affiche la fenêtre de discussion
+        :return: True si l'utilisateur a éu une conversation avec son destinataire, False sinon
+        """
+        from Communicate import envoyer_message
+        end = False
+
+        while not end:
+            event, values = self.__window.read()
+            if event == 'btn_quit':
+                end = True
+            elif event == 'btn_send':
+                envoyer_message(self.client, values['input'])
+                self.__print_msg(self.__expediteur, values['input'])
+                self.__window['input'].update('')
+            elif event == sg.WIN_CLOSED:
+                end = True
+        self.close()
+
+    def close(self):
+        self.queue_recv.put(None)  # Pour que le thread de réception se termine proprement (On débloque la fn bloquante)
+        self.__window.close()
+
+
+class YesNoWindow:
+    """
+    YesNoWindow - Fenêtre préconfigurée pour demander une confirmation à l'utilisateur
+    """
+    def __init__(self, title, text):
+        self.layout = [
+            [sg.Text(text)],
+            [sg.Button('Oui', key='btn_yes'), sg.Push(), sg.Button('Non', key='btn_no')]
+        ]
+        self.window = sg.Window(title, self.layout, finalize=True, scaling=scaling)
+
+    def show(self):
+        """
+        Affiche la fenêtre et retourne le résultat de l'utilisateur
+        :return: True si l'utilisateur a cliqué sur Oui, False sinon
+        """
+        event, values = self.window.read()
+        self.window.close()
+        if event == 'btn_yes':
+            return True
+        else:  # englobe 'btn_no' et sg.WIN_CLOSED
+            return False
+
+
 def disable_buttons(window, client):
     """
     Permet de désactiver les boutons de la fenêtre principale en fonctions du contexte de l'utilisateur
@@ -156,7 +280,7 @@ def disable_buttons(window, client):
     if client.cle is None:
         buttons_status = [False, True, True, True, False]
     else:
-        buttons_status = [True, False, False]
+        buttons_status = [True, False, False, False]
 
     # On complète la liste en desactivant les boutons si ils n'ont pas été définis au dessus
     while len(buttons_status) < 5:
@@ -182,6 +306,8 @@ class Menu:
         :param client: Le client, utilisé pour toggle les boutons
         :param msg_info: Message d'information à afficher
         """
+
+        self.client = client
         msg_info = msg_info.strip()
 
         self.layout = []
@@ -195,10 +321,25 @@ class Menu:
             [sg.Button('Supprimer votre clé', key='btn_delKey', size=(15, 1)), sg.Button('Communiquer', key='btn_communiquer', size=(15, 1))],
             [sg.Button('Quitter', key='btn_quit', size=(32, 1))]
         ]
-        self.window = sg.Window('Menu', self.layout, finalize=True, scaling=scaling)
+
+        title = 'Menu - ' + client.nom
+        self.window = sg.Window(title, self.layout, finalize=True, scaling=scaling)
 
         self.window = disable_buttons(self.window, client)
+        self.update_conn_btn()  # On met à jour le statut du bouton communiquer si une demande est arrivée alors que la
+                                # fenêtre était fermée
 
+    def update_conn_btn(self):
+        """
+        Permet de mettre à jour le bouton de connexion en fonction du contexte de l'utilisateur pour le mettre en vert
+        si une demande de connexion est en attente
+        :return None
+        """
+        print("UPDATE CONN BTN")
+        if self.client.demande_connexion:
+            self.window['btn_communiquer'].update(button_color=(None, 'green'))
+        else:
+            self.window['btn_communiquer'].update(button_color=(None, sg.theme_button_color_background()))
 
     def show(self):
         end = False
@@ -220,6 +361,11 @@ class Menu:
             if event == 'btn_delKey':
                 end = True
                 action = 'delKey'
+
+            if event == 'btn_communiquer':
+                end = True
+                action = 'communiquer'
+
 
         self.window.close()
         return action

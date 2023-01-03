@@ -1,21 +1,21 @@
 import Cryptage
 from multiprocessing import Queue
 
-status_list = ["idle", "createKey", "editKey", "deleteKey"]
+status_list = ["idle", "createKey", "editKey", "deleteKey", "initDialog", "getCoord", "waitAccept", "discuss"]
 status = "idle"
 
 retour_infos = Queue()
 """
-Permet au thread principal d'obtenir les informations que reçoient le thread de réception de messages
+Permet au thread principal d'obtenir les informations sur les messages que le thread de réception a recueillis
 """
 
 
 def set_status(s):
     """
     Fonction qui modifie la variable globale status. L'objectif est de permettre au thread de réception de savoir
-    quelles sont les actions a effectuer
+    quelles sont les actions à effectuer
     :param s: Le nouveau status
-    :return: True si le changement a été effectué, False sinon
+    :return: True si le changement a été effectué, False sinon.
     """
     global status
     if s in status_list:
@@ -36,13 +36,14 @@ def process_msg(queue, client):
     end = False
     while not end:
         msg = queue.get()
-        server = queue.get()
+        emetteur = queue.get()
 
         print('Message reçu : ' + msg)
         print('status : ' + status)
 
         if msg != 'end':
             process_errors(msg)
+            process_demande_dialog(msg, client, emetteur)
 
             if status == 'createKey':
                 process_create_key(msg, client.temp_cle)
@@ -53,7 +54,20 @@ def process_msg(queue, client):
             elif status == 'deleteKey':
                 process_delete_key(msg, client.cle)
 
+            elif status == 'initDialog':
+                process_init_dialog(msg, client)
 
+            elif status == 'getCoord':
+                process_get_coord(msg, client)
+
+            elif status == 'waitAccept':
+                process_accept_refuse_dialog(msg, client)
+
+            elif status == 'discuss':
+                process_discuss(msg, client)
+
+            else:
+                print('WARN : Un message reçu par ' + emetteur + ' n\'a pas été traité (' + msg + ')')
 
         else:
             end = True
@@ -90,16 +104,17 @@ def process_create_key(msg, cle):
     :return: None
     """
 
-    print('process_create_key')
-    crypte = msg.split(',')[-1]
-    clair = Cryptage.decrypter(msg, cle).split(',')[-1]
+    if cle is not None:
+        print('process_create_key')
+        crypte = msg.split(',')[-1]
+        clair = Cryptage.decrypter(msg, cle).split(',')[-1]
 
-    if crypte == 'T1':
-        retour_infos.put(False)
-    elif clair == 'T1':
-        retour_infos.put(True)
-    else:
-        retour_infos.put(False)
+        if crypte == 'T1':
+            retour_infos.put(False)
+        elif clair == 'T1':
+            retour_infos.put(True)
+        else:
+            retour_infos.put(False)
 
 
 def process_edit_key(msg, nv_cle, ancienne_cle):
@@ -155,7 +170,156 @@ def process_delete_key(msg, cle):
         retour_infos.put(False)
 
 
-# -------- Fonctions d'envoi de messages au serveur --------
+def process_get_coord(msg, client):
+    """
+    Traite les messages reçus par le serveur à propos de la demande de coordonnées et place les informations dans
+    l'objet client (IP:PORT). Envoie True dans la file retour_infos si les coordonnées ont été reçues, False sinon.
+
+    INFO :
+        Format du message de succès : Eclef<Nom utilisateur B, IP, PORT, T6>,
+        Format du message d’échec : Eclef<Nom utilisateur A, T6>
+
+    :param msg: Le message à traiter
+    :param client: l'objet de type client
+    :return: None
+    """
+    cle = client.cle
+
+    msg_decrypt = Cryptage.decrypter(msg, cle)
+    msg_split = msg_decrypt.split(',')
+
+    if len(msg_split) == 2 and msg_split[-1] == 'T6':
+        retour_infos.put(False)
+    elif len(msg_split) == 4 and msg_split[-1] == 'T6':
+        ip = msg_split[1]
+        port = msg_split[2]
+        client.addr_destinataire = (ip, int(port))
+        retour_infos.put(True)
+
+
+def process_init_dialog(msg, client):
+    """
+    Traite les messages reçus par le serveur durant la phase d'initialisation du dialogue et s'occupe de l'envoi de ks à B
+
+    INFO :
+        Format du message reçu : Eclef_A<Nom de l’arbitre, Nom utilisateur A, T4, Ks, Eclef_B<Nom de l’arbitre, Nom utilisateur A, Nom utilisateur B, Ks>>
+        Si utilisateur B n'as pas été trouvé, le message reçu est : Eclef_A<Nom de l’arbitre, Nom utilisateur A, T4>
+
+        Format du message à envoyer a B : Eclef_B<Nom de l’arbitre, Nom utilisateur A, Nom utilisateur B, Ks>
+
+    :param msg: Le message reçu par le serveur
+    :param cle: La clé de l'utilisateur
+    :param socket: Le socket à utiliser pour envoyer le message vers l'utilisateur B
+    :return: None
+    """
+
+    print('process_init_dialog')
+    cle = client.cle
+    nom_client = client.nom
+    nom_arbitre = client.nom_arbitre
+
+    decrypt_msg = Cryptage.decrypter(msg, cle)
+    msg_split = decrypt_msg.split(',')
+
+    if len(msg_split) == 3 and msg_split[-1] == 'T4':
+        retour_infos.put(False)
+    elif len(msg_split) >= 4 and msg_split[2] == 'T4':
+        ks = msg_split[3]
+        client.ks = ks
+
+        position_fin_ks = decrypt_msg.find(ks) + len(ks) + 1
+        partie_a_envoyer = decrypt_msg[position_fin_ks:]
+
+        set_status('waitAccept')
+        client.socket.sendto(partie_a_envoyer.encode(), client.addr_destinataire)
+
+        retour_infos.put(True)
+        
+        
+def process_demande_dialog(msg, client, emetteur):
+    """
+    Traite le message de demande de communication émis par l'utilisateur A vers B (nous)
+    (C'est la 2° partie du message T4 que reçoit A par le serveur)
+    + Fais clignoter le bouton communiquer de l'interface graphique pour indiquer à l'utilisateur qu'il a une
+    demande de communication
+
+    INFO :
+        Format du message reçu : Eclef_B<Nom de l’arbitre, Nom utilisateur A, Nom utilisateur B, Ks>>
+
+    :param msg: Le message reçu de A
+    :param client: L'objet utilisateur contenant les informations de l'utilisateur B
+    :param emetteur: Les coordonnées (IP, PORT) de l'utilisateur A
+    :return: None
+    """
+
+    cle = client.cle
+    nom_client = client.nom
+    nom_arbitre = client.nom_arbitre
+
+    if cle is not None and nom_client is not None and nom_arbitre is not None:
+        decrypt_msg = Cryptage.decrypter(msg, cle)
+        msg_split = decrypt_msg.split(',')
+
+        if len(msg_split) == 4:
+            if msg_split[2].upper() == nom_client.upper() and msg_split[0].upper() == nom_arbitre.upper():
+                client.addr_destinataire = emetteur
+                client.nom_destinataire = msg_split[1]
+                client.ks = msg_split[3]
+                client.demande_connexion = True
+                try:
+                    client.main_menu.update_conn_btn()
+                except Exception:  # Exception levée si la fenêtre principale n'est pas ouverte
+                    pass
+
+
+def process_accept_refuse_dialog(msg, client):
+    """
+    Traite le message de réponse à la demande de communication émise par l'utilisateur B vers A (nous)
+    S'occupe de fermer la fenêtre de dialogue qui attend si la réponse est négative, ou s'occupe de dé-geler la fenêtre
+    de communication si la réponse est positive
+
+    INFO :
+        Format du msg envoyé si comm accepté : EKs<Nom utilisateur B, Nom utilisateur A,T5>.
+        Format du msg envoyé si comm refusé : EKs<T5, Nom utilisateur B, Nom utilisateur A>.
+
+    NB : Le message de refus n'es pas dans le sujet.
+
+    :param msg: Le message reçu de B
+    :param client: L'objet utilisateur contenant les informations de l'utilisateur A
+    :return: None
+    """
+    cle = client.ks
+    nom_client = client.nom
+    nom_destinataire = client.nom_destinataire
+
+    decrypt_msg = Cryptage.decrypter(msg, cle)
+    if decrypt_msg[-2:] == 'T5':
+        client.communication_window.show_welcome_text()
+        client.communication_window.enable_communication()
+        set_status('discuss')
+    else:
+        client.communication_window.close()
+        print("CEST LE STOMP !")
+
+
+def process_discuss(msg, client):
+    """
+    Traite les messages reçus par le serveur durant la phase de discussion et place les nouveaux messages dans la file
+    de la fenêtre de discussion (DiscussWindow.queue_recv)
+    :param msg: Le message reçu par le serveur
+    :param client: L'objet utilisateur contenant les informations de l'utilisateur
+    :return: None
+    """
+
+    if client.communication_window is not None:
+        cle = client.ks
+        nom_client = client.nom
+
+        msg_decrypt = Cryptage.decrypter(msg, cle)
+        client.communication_window.queue_recv.put(msg_decrypt)
+
+
+# -------- Fonctions d'envoi de messages au serveur / client B --------
 
 def create_key(client):
     """
@@ -224,3 +388,94 @@ def delete_key(client):
 
     return retour_infos.get()
 
+
+def demander_ks(client):
+    """
+    Permet d'envoyer au serveur le message de demande de dialogue avec un autre client.
+
+    INFO :
+        Format du msg envoyé : Eclef< Nom de l’utilisateur A, Nom de l’arbitre, Nom de l’utilisateur B, T4>.
+
+    :return: True si l'arbitre est OK avec la demande, False sinon
+    """
+    set_status('initDialog')
+    cle = client.cle
+    nom_utilisateur = client.nom
+    nom_arbitre = client.nom_arbitre
+    nom_destinataire = client.nom_destinataire
+
+    msg_crypt = nom_utilisateur + ',' + nom_arbitre + ',' + nom_destinataire + ',T4'
+    msg_crypt = Cryptage.crypter(msg_crypt, cle)
+    client.socket.sendto(msg_crypt.encode(), client.addr_arbitre)
+
+    return retour_infos.get()
+
+
+def demander_coordonnees(client):
+    """
+    Permet d'envoyer au serveur le message de demande de coordonnées d'un autre client.
+
+    INFO :
+        Format du msg envoyé : <Nom utilisateur, Nom de l’arbitre, Eclef<T6, utilisateur B>>.
+
+    :return: True si les coordonnées de l'utilisateur ont été reçues, False sinon
+    """
+    set_status('getCoord')
+
+    nom_utilisateur = client.nom
+    nom_arbitre = client.nom_arbitre
+    cle = client.cle
+    nom_destinataire = client.nom_destinataire
+
+    msg_crypt = "T6," + nom_destinataire
+    msg_crypt = Cryptage.crypter(msg_crypt, cle)
+
+    msg = nom_utilisateur + ',' + nom_arbitre + ',' + msg_crypt
+    client.socket.sendto(msg.encode(), client.addr_arbitre)
+
+    return retour_infos.get()
+
+
+def accepter_refuser_dialogue(client, accepter):
+    """
+    Permet de déclarer à l'autre client si on accepte ou non sa demande de dialogue.
+
+    INFO :
+        Dans ce cas-là, nous sommes l'utilisateur B
+        Format du msg envoyé si on accepte : EKs<Nom utilisateur B, Nom utilisateur A,T5>.
+        Format du msg envoyé si on refuse : EKs<T5, Nom utilisateur B, Nom utilisateur A>.
+    :param client: L'objet Utilisateur contenant les informations du client
+    :param accepter: Booléen indiquant si on accepte ou non la demande de dialogue
+    :return: None
+    """
+
+    nom_utilisateur = client.nom
+    nom_destinataire = client.nom_destinataire
+    cle = client.cle
+    ks = client.ks
+
+    msg_base = nom_utilisateur + ',' + nom_destinataire
+    if accepter:
+        msg_crypt = msg_base + ',T5'
+    else:
+        msg_crypt = 'T5,' + msg_base
+
+    msg_crypt = Cryptage.crypter(msg_crypt, ks)
+    client.socket.sendto(msg_crypt.encode(), client.addr_destinataire)
+
+
+def envoyer_message(client, message):
+    """
+    Permet d'envoyer un message à notre destinataire.
+    :param client: L'objet utilisateur contenat les informations de l'utilisateur
+    :param message: Le message à envoyer a B
+    :return: None
+    """
+
+    cle = client.ks
+    nom_utilisateur = client.nom
+    nom_destinataire = client.nom_destinataire
+
+    msg_crypt = Cryptage.crypter(message, cle)
+
+    client.socket.sendto(msg_crypt.encode(), client.addr_destinataire)
