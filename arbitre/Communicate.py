@@ -107,7 +107,7 @@ def process_classic(msg, addr, sck):
                 T3_execute(dechiffre, nom_utilisateur, addr, sck)
             elif dechiffre[:2] == 'T6':
                 print('Traitement du message T6 de ' + nom_utilisateur + ' (' + msg + ')')
-                # T6_execute(dechiffre, nom_utilisateur, addr, sck)
+                T6_execute(dechiffre, nom_utilisateur, addr, sck)
 
 
 def process_T4(msg, addr, sck):
@@ -131,9 +131,9 @@ def process_T4(msg, addr, sck):
         key = keys[index]
         msg_dechiffre = Cryptage.decrypter(msg, key)
 
-        if msg_dechiffre[:2] == 'T4':
+        if msg_dechiffre[-2:] == 'T4':
             msg_split = msg_dechiffre.split(',')
-            if len(msg_split) == 4 and msg_split[2] == nom_arbitre:
+            if len(msg_split) == 4 and msg_split[1] == nom_arbitre:
                 util_a = msg_split[0].upper()
                 if key == Database.get_key(util_a):
                     cle_trouve = True
@@ -141,7 +141,7 @@ def process_T4(msg, addr, sck):
                     T4_execute(msg_dechiffre, util_a, addr, sck)
                 else:
                     print("WARN : " + util_a + " a envoyé un message T4 qui a été déchiffré avec une autre clé que la sienne")
-
+        index = index + 1
 
 def T2_execute(msg, user, addr, sck):
     """
