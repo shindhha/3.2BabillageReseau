@@ -1,3 +1,5 @@
+import tkinter
+
 import PySimpleGUI as sg
 import multiprocessing
 import threading as th
@@ -20,6 +22,53 @@ scaling = 3
 Valeur de zoom des fenêtres. Recommandé: 1.5
 """
 
+middle_win_pos = (None, None)
+"""
+Contient la position de la dernière fenêtre ouverte. Permet de déplacer les nouvelles fenêtres sur cette position
+"""
+
+
+def get_window_pos(evt: tkinter.Event) -> None:
+    """
+    Permet de récupérer les coordonnées de la fenêtre sur l'écran à partir d'un évènement de type <Configure>
+    :param evt: L'évènement de type <Configure>
+    """
+    global middle_win_pos
+    banned_coords = ()  # Coordonnées "magiques" utilisées lors de la construction de la fenetre par Tkinter
+    if (evt.x, evt.y) not in banned_coords:
+        widget: tkinter.Widget = evt.widget
+        middle_win_pos = evt.x + widget.winfo_width() / 2, evt.y + widget.winfo_height() / 2
+        print(middle_win_pos)
+
+
+def set_location(window: sg.Window) -> None:
+    """
+    Permet de définir la position de la fenêtre en fonction de la position de la dernière fenêtre ouverte
+    :param window: La fenêtre à déplacer
+    """
+    global middle_win_pos
+    x, y = middle_win_pos
+    if x is not None and y is not None:
+        size_x, size_y = window.current_size_accurate()
+        x = x - size_x / 2
+        y = y - size_y / 2
+        window.TKroot.geometry("+%d+%d" % (x, y))
+
+        print("Window moved to", x, y)
+
+
+def bind_get_pos(window: sg.Window) -> None:
+    """
+    Permet de lier la fonction get_window_pos à l'évènement <Configure> de la fenêtre passée en paramètre puis lance
+    un évènement de ce type pour récupérer la position de la fenêtre (au cas où elle aurait été bougée alors que
+    l'évènement n'était pas lié)
+    (Fonction utilisée avec Tk::after() car des évènement de types <Configure> sont envoyés à la fenêtre lors de ses
+    créations avec des fausses coordonnées)
+    :param window: La fenêtre à lier
+    """
+    window.TKroot.bind("<Configure>", get_window_pos)
+    window.TKroot.event_generate("<Configure>", x=window.TKroot.winfo_x(), y=window.TKroot.winfo_y())
+
 
 class SimpleInputWindow():
     """
@@ -29,7 +78,7 @@ class SimpleInputWindow():
     def __init__(self, title, text):
         """
         :param title: Le titre de la fenêtre
-        :param text: Le texte a afficher devant la case de saisie
+        :param text: Le texte à afficher devant la case de saisie
         """
         self.layout = [
             [sg.Text(text)],
@@ -37,11 +86,14 @@ class SimpleInputWindow():
             [sg.Button('Annuler', key='btn_annuler'), sg.Push(), sg.Button('Valider', key='btn_valider')]
         ]
         self.window = sg.Window(title, self.layout, finalize=True, scaling=scaling)
+        set_location(self.window)
 
         # Bind de la touche Entrée
         self.window.bind('<Return>', 'btn_valider')
 
     def show(self):
+        self.window.TKroot.after(500, bind_get_pos, self.window)
+
         event, values = self.window.read()
 
         if event == 'btn_annuler' or event == sg.WIN_CLOSED:
@@ -68,11 +120,14 @@ class ErrorWindow:
             [sg.Button('Ok', key='btn_ok')]
         ]
         self.window = sg.Window('Erreur', self.layout, finalize=True, scaling=scaling)
+        set_location(self.window)
 
         # Bind de la touche entrée au bouton ok
         self.window.bind('<Return>', 'btn_ok')
 
     def show(self):
+        self.window.TKroot.after(500, bind_get_pos, self.window)
+
         event, values = self.window.read()
         self.window.close()
         return event, values
@@ -107,11 +162,14 @@ class ConnectWindow:
             [sg.Push(), sg.Button('Valider', key='btn_connecter')]
         ]
         self.window = sg.Window('Connexion', self.layout, finalize=True, scaling=scaling)
+        set_location(self.window)
 
         # Bind la touche entrée à la validation
         self.window.bind('<Return>', 'btn_connecter')
 
     def show(self):
+        self.window.TKroot.after(500, bind_get_pos, self.window)
+
         end = False
         while not end:
             event, values = self.window.read()
@@ -129,7 +187,7 @@ class ConnectWindow:
         return name
 
 
-class InfoWindow():
+class InfoWindow:
     """
     InfoWindow - Fenêtre préconfigurée pour simplement afficher un message
     """
@@ -140,8 +198,11 @@ class InfoWindow():
             [sg.Button('Ok', key='btn_ok')]
         ]
         self.window = sg.Window(title, self.layout, finalize=True, scaling=scaling)
+        set_location(self.window)
 
     def show(self):
+        self.window.TKroot.after(500, bind_get_pos, self.window)
+
         event, values = self.window.read()
         self.window.close()
         return event, values
@@ -164,6 +225,7 @@ class DiscussWindow:
             [sg.Button('Sortir', key='btn_quit'), sg.Push(), sg.Button('Envoyer', key='btn_send', disabled=True)]
         ]
         self.__window = sg.Window('Discussion', self.__layout, finalize=True, scaling=scaling)
+        set_location(self.__window)
 
         # Variables liés à l'affichage des messages
         self.__text_msg = self.__window['output']
@@ -225,6 +287,8 @@ class DiscussWindow:
         Affiche la fenêtre de discussion
         :return: True si l'utilisateur a éu une conversation avec son destinataire, False sinon
         """
+        self.__window.TKroot.after(500, bind_get_pos, self.__window)
+
         from Communicate import envoyer_message
         end = False
 
@@ -255,12 +319,15 @@ class YesNoWindow:
             [sg.Button('Oui', key='btn_yes'), sg.Push(), sg.Button('Non', key='btn_no')]
         ]
         self.window = sg.Window(title, self.layout, finalize=True, scaling=scaling)
+        set_location(self.window)
 
     def show(self):
         """
         Affiche la fenêtre et retourne le résultat de l'utilisateur
         :return: True si l'utilisateur a cliqué sur Oui, False sinon
         """
+        self.window.TKroot.after(500, bind_get_pos, self.window)
+
         event, values = self.window.read()
         self.window.close()
         if event == 'btn_yes':
@@ -324,6 +391,7 @@ class Menu:
 
         title = 'Menu - ' + client.nom
         self.window = sg.Window(title, self.layout, finalize=True, scaling=scaling)
+        set_location(self.window)
 
         self.window = disable_buttons(self.window, client)
         self.update_conn_btn()  # On met à jour le statut du bouton communiquer si une demande est arrivée alors que la
@@ -342,6 +410,8 @@ class Menu:
             self.window['btn_communiquer'].update(button_color=(None, sg.theme_button_color_background()))
 
     def show(self):
+        self.window.TKroot.after(500, bind_get_pos, self.window)
+
         end = False
         while not end:
             event, values = self.window.read()
@@ -365,7 +435,6 @@ class Menu:
             if event == 'btn_communiquer':
                 end = True
                 action = 'communiquer'
-
 
         self.window.close()
         return action
