@@ -208,7 +208,7 @@ if __name__ == "__main__":
         if (longeur == None): # verification de la requette reçu
             try :
                 tab = message.split(',')
-                ajoutClef(tab[0].upper(),tab[3].upper(),comm)
+                ajoutClef(tab[0],tab[3],comm)
                 aEnvoyer = cryptage.crypter(nomArbitre + ',' + tab[0] + ',T1',tab[3]) # creation du message de validation a envoyer dans le cas ou l'instruction est passé  
 
             except sqlite3.IntegrityError as e:
@@ -227,7 +227,7 @@ if __name__ == "__main__":
                 nvMessage = partie1 + partie2 # assemblage des 2 partie
                 tab = nvMessage.split(',') # decoupage du message sous forme de tableau en fonction des virgules
 
-                modif(tab[4],tab[0].upper())
+                modif(tab[4],tab[0])
 
                 aEnvoyer = cryptage.crypter(tab[0] + ',' + tab[1] + ',T2',tab[4]) # creation message de validation
             except Exception:
@@ -242,7 +242,7 @@ if __name__ == "__main__":
                 nvMessage = partie1 + partie2 # assemblage des 2 partie
                 tab = nvMessage.split(',') # decoupage du message sous forme de tableau en fonction des virgules
                 
-                suppr(tab[0].upper())
+                suppr(tab[0])
                 
                 aEnvoyer = cryptage.crypter(tab[0] + ',' + tab[1] + ',T3',tab[3])
 

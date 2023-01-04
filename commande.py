@@ -23,7 +23,6 @@ def reception(client):
         phrase = reponse.decode() # recupere la reponse envoyé par le serveur
         verif = cryptage.decrypter(phrase, client.clefTemporaire)
 
-        #TODO faire refus connection
         if (client.ks != None): 
             verif = cryptage.decrypter(phrase,client.ks)
             if (verif == 'T5'):
@@ -83,7 +82,7 @@ def reception(client):
         if (client.clef != None):
             verif = cryptage.decrypter(phrase, client.clef)
         tableau = verif.split(',')
-        if (len(tableau) == 4 and tableau[2] == client.nom.upper()):
+        if (len(tableau) == 4 and tableau[2] == client.nom()):
             print ('Vous avez une nouvelle demande de connexion en attente, tapez un caractere quelconque pour la consulter')
             reponse = input("     **********************************************\n"
                            +"     *                                            *\n"
@@ -169,7 +168,6 @@ def t4(client):
                     print('arret de la connection')
                     client.ks = None
                     client.destinataire = None
-                    print ()
                 else:
                     message = cryptage.crypter(message + 'T6',client.ks)
                     print ('Message envoyé !!')
