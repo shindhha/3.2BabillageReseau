@@ -1,7 +1,7 @@
 # 3.2BabillageReseau
 # FR
 # Description
-logiciel de discussion qui permet de communiquer entre deux utilisateurs par l'intermediaire d'un serveur commun
+logiciel de discussion dans un intranet fermer permetant d'envoyer des message crypter a un correspondant choisi
 # Rôles
 Laurie Clément -> Développeur <br/>
 Lala Antoine -> Développeur <br/>
