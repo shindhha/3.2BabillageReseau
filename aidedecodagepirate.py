@@ -59,8 +59,9 @@ def initialisation() -> None:
 
 def collage()-> None:
     global phrase
-    while(len(phrase) < 1000):
-        #TODO reception de la phrase a ajouter a la suite du reste
+    while(len(phrase) < 3000):
+        (recu,coord) = s.recvfrom(3000)
+        recu = recu.decode()
         enTrop = len(recu) % longeurCle # calcul du nombre de aractere a retirer pour tomber sur une phrase de logeur = 0 modulo longeurCle
         aAjouter = recu[:len(recu) - enTrop] # supression si besoins des derniers caracteres
         phrase += aAjouter #ajout du message au reste de la phrase
