@@ -1,9 +1,8 @@
-import threading
 import cryptage
 import socket
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.bind('localhost',5001)
+s.bind(('localhost',5001))
 phrase = ''
 sousPhrase = [] # listes acceuillant les sous phrases
 repetition = [] # listes des dictionnaire recapitulant les repetitions de chaque lettres dans les sous-message
@@ -25,8 +24,6 @@ longeur = len(lettres)
 for i in range (len(accent)):
     lettres[longeur + i] = accent[i]
 
-
-piratage = threading.Thread(target ='lancement')
 
 def lancement()-> None:
     initialisation()
@@ -59,7 +56,7 @@ def initialisation() -> None:
 
 def collage()-> None:
     global phrase
-    while(len(phrase) < 3000):
+    while(len(phrase) < 1500):
         (recu,coord) = s.recvfrom(3000)
         recu = recu.decode()
         enTrop = len(recu) % longeurCle # calcul du nombre de aractere a retirer pour tomber sur une phrase de logeur = 0 modulo longeurCle
@@ -70,22 +67,17 @@ def collage()-> None:
 def decoupage() -> list([str]):
     for i in range (len(phrase)):
         sousPhrase[i % longeurCle] += phrase[i] #decoupage de la phrase en sous-phrase
-    print(sousPhrase[0])
-    print(sousPhrase[1])
-    print(sousPhrase[2])
-    print(sousPhrase[3])
     return sousPhrase
 
 
 def frequence(listeSousPhrase:list([str]))-> list([dict]):
     # boucle sur les sous-message
     for n in range(longeurCle):
-        for i in sousPhrase[n]: # selection des caracteres de la sous-message 1 par 1
+        for i in listeSousPhrase[n]: # selection des caracteres de la sous-message 1 par 1
             if (repetition[n].get(i,"None") == "None"): # verification si lettre deja dans dictionnaire ou premiere apparition
                 repetition[n][i] = 1 # cas premiere apparition: ajout de la lettre dans le dictionaire et nombre d'apparition a 1
             else:
                 repetition[n][i] = repetition[n].get(i) + 1 # cas deja dans le dictionaire: ajout de 1 au nombre d'aparition de la lettre
-    print (repetition)
     return repetition
 
 
@@ -100,7 +92,6 @@ def clePossible(dicoFrequence)->list([str]):
         lettreCle2 = lettres.get((valeur - valeurDeSpace) % len(lettres))
         clefs[0] += lettreCle1
         clefs[1] += lettreCle2
-    print (clefs)
     return clefs
 
 
