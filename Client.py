@@ -143,7 +143,6 @@ def demarrer_communication_initialisateur():
         utilisateur.nom_destinataire = nom_destinataire
         # Demande à l'arbitre des coordonnées du destinataire
         if Communicate.demander_coordonnees(utilisateur):
-            print("JAI LES COORDONNES")
             # Demande à l'arbitre de la clé de session (KS)
             if Communicate.demander_ks(utilisateur):
                 # L'arbitre a accepté la demande, on affiche la fenêtre de communication pendant que l'utilisateur B

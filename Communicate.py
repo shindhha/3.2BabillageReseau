@@ -129,6 +129,8 @@ def process_create_key(msg, cle):
         else:
             retour_infos.put(False)
 
+    set_status('idle')
+
     return traite
 
 
@@ -147,6 +149,7 @@ def process_edit_key(msg, nv_cle, ancienne_cle):
     :param ancienne_cle: L'ancienne clé saisie par l'utilisateur
     :return: True si le message a été traité par cette fonction, False sinon
     """
+    traite = False
 
     print('process_edit_key')
 
@@ -161,6 +164,8 @@ def process_edit_key(msg, nv_cle, ancienne_cle):
         traite = True
     else:
         retour_infos.put(False)
+
+    set_status('idle')
 
     return traite
 
@@ -177,7 +182,7 @@ def process_delete_key(msg, cle):
     :param cle: La clé saisie par l'utilisateur
     :return: True si le message a été traité par cette fonction, False sinon
     """
-
+    traite = False
     print('process_delete_key')
 
     decrypt_cle = Cryptage.decrypter(msg, cle).split(',')[-1]
@@ -187,6 +192,8 @@ def process_delete_key(msg, cle):
         traite = True
     else:
         retour_infos.put(False)
+
+    set_status('idle')
 
     return traite
 
@@ -261,6 +268,7 @@ def process_init_dialog(msg, client):
 
         retour_infos.put(True)
         traite = True
+        #set_status('idle')
     return traite
         
         
@@ -330,7 +338,7 @@ def process_accept_refuse_dialog(msg, client):
                 set_status('discuss')
             else:
                 client.communication_window.queue_recv.put("A refuse la demande de communication")
-
+                set_status('idle')
 
 def process_discuss(msg, client):
     """

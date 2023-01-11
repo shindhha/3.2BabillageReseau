@@ -280,6 +280,7 @@ class DiscussWindow:
         """
         self.__window['btn_send'].update(disabled=False)
         self.__window['input'].update(disabled=False)
+        self.__window.bind('<Return>', 'btn_send')
 
     def show(self):
         """
@@ -410,7 +411,7 @@ class Menu:
         :return None
         """
         print("UPDATE CONN BTN")
-        if self.client.demande_connexion:
+        if self.client.demande_connexion and self.client.cle is not None:
             self.window['btn_communiquer'].update(button_color=(None, 'green'))
         else:
             self.window['btn_communiquer'].update(button_color=(None, sg.theme_button_color_background()))
