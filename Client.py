@@ -131,20 +131,20 @@ def supression_cle():
 def demarrer_communication_initialisateur():
     """
     Permet de démarrer la communication avec un tiers en tant qu'initialisateur
-    :return: True si l'utilisateur a pu communiquer avec un tiers, False sinon
+    :return: None si la communication a été démarrée, sinon une chaine de caractère indiquant l'erreur
     """
 
-    a_communique = False
+    erreur = None
 
     # Demande du nom du destinataire
     fenetre = Windows.SimpleInputWindow('Communiquer', 'Entrez le nom du destinataire :')
     nom_destinataire = fenetre.show()
-    if nom_destinataire is not None:
+    if nom_destinataire is not None and len(nom_destinataire) > 0:
         utilisateur.nom_destinataire = nom_destinataire
-        # Demande à l'arbitre des coordonnées du destinataire
-        # if Communicate.demander_coordonnees(utilisateur):
-        #     print("JAI LES COORDONNES")
-            # Demande à l'arbitre de la clé de session (KS)
+    else:
+        erreur = 'Nom du destinataire invalide'
+
+    if erreur is None:
         if Communicate.demander_ks(utilisateur):
             # L'arbitre a accepté la demande, on affiche la fenêtre de communication pendant que l'utilisateur B
             # accepte la demande
@@ -154,7 +154,10 @@ def demarrer_communication_initialisateur():
 
             utilisateur.communication_window = None
             utilisateur.ks = None
-    return a_communique
+        else:
+            erreur = 'L\'arbitre a refusé la demande'
+
+    return erreur
 
 
 def rejoindre_communication():
@@ -200,20 +203,20 @@ def actions():
         elif action == 'createKey':
             print('Création de la clé')
             if creation_cle():
-                msg_info = 'Clé créée avec succès'
+                msg_info = 'INFO : Clé créée avec succès'
                 couleur = 'green'
 
 
         elif action == 'editKey':
             print('Modification de la clé')
             if creation_cle(update=True):
-                msg_info = 'Clé modifiée avec succès'
+                msg_info = 'INFO : Clé modifiée avec succès'
                 couleur = 'green'
 
         elif action == 'delKey':
             print('Suppression de la clé')
             if supression_cle():
-                msg_info = 'Clé supprimée avec succès'
+                msg_info = 'INFO : Clé supprimée avec succès'
                 couleur = 'green'
 
         elif action == 'communiquer':
@@ -229,8 +232,9 @@ def actions():
                 utilisateur.demande_connexion = False
 
             else:
-                if not demarrer_communication_initialisateur():
-                    msg_info = 'Le nom du destinataire n\'existe pas '
+                erreur = demarrer_communication_initialisateur()
+                if erreur is not None:
+                    msg_info = 'ERREUR : ' + erreur
                     couleur = 'red'
 
         else:

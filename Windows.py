@@ -19,7 +19,7 @@ sg.theme('CUSTOM_THEME')
 
 scaling = 3
 """
-Valeur de zoom des fenêtres. Recommandé: 1.5
+Valeur de zoom des fenêtres. Recommandé: 3
 """
 
 middle_win_pos = (None, None)
@@ -386,9 +386,9 @@ class Menu:
 
         self.layout = []
         if msg_info != '':
-            self.layout.append([
-                sg.Push(), sg.Text(('INFO : ' + msg_info), text_color=couleur), sg.Push()
-            ])
+            self.layout.append(
+                [sg.Push(), sg.Text(msg_info, text_color=couleur), sg.Push()]
+            )
 
         self.layout += [  # += --> Append toute la liste à self.layout
             [sg.Button('Créer votre clé', key='btn_createKey', size=(15, 1)), sg.Button('Modifier votre clé', key='btn_editKey', size=(15, 1))],
