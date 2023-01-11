@@ -290,7 +290,7 @@ def process_demande_dialog(msg, client, emetteur):
         msg_split = decrypt_msg.split(',')
 
         if len(msg_split) == 4:
-            if msg_split[2].upper() == nom_client.upper() and msg_split[0].upper() == nom_arbitre.upper():
+            if msg_split[2] == nom_client and msg_split[0] == nom_arbitre:
                 client.addr_destinataire = emetteur
                 client.nom_destinataire = msg_split[1]
                 client.ks = msg_split[3]

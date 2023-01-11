@@ -299,7 +299,7 @@ class DiscussWindow:
         while not end:
             event, values = self.__window.read()
             if event == 'btn_quit' or event == sg.WIN_CLOSED:
-                envoyer_message(self.client, 'A quitte le salon de discussion')
+                envoyer_message(self.client, 'A quitté le salon de discussion')
 
                 end = True
             elif event == 'btn_send':

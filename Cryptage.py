@@ -4,22 +4,21 @@ texte = 'antoine'
 clef = 'b'
 
 lettres = {}
-# creation du dictionnaire contenant l'alphabet utiliser pour le cryptage / decryptage
-for i in  range (ord('A'),ord('Z') + 1):
-    lettres[i - ord('A')] = chr(i)
-lettres[26] = ' '
-for i in range(27,37):
-    lettres[i] = str(i - 27)
-lettres[37] = ','
-lettres[38] = '-'
-lettres[39] = '.'
-lettres[40] = '?'
-lettres[41] = '!'
-lettres[42] = ':'
-lettres[43] = ';'
+accent = ['é','è','ë','ê','à','â','ä','û','ü','ù','ï','î','ö','ô','ç']
 
-def cleOk(clef):
-    clef = clef.upper()
+# creation du dictionnaire contenant l'alphabet utiliser pour le cryptage / decryptage
+for i in range (32 , 92):
+    lettres[i - 32] = chr (i)
+# esclusion du carcater '\'
+for i in range (93 , 123):
+    lettres[i - 32 - 1] = chr (i)
+
+longeur = len(lettres)
+for i in range (len(accent)):
+    lettres[longeur + i] = accent[i]
+
+
+def cleOk(clef: str) -> bool:
     for i in clef: # selection des lettres de la cle 1 par 1
         ok = False
         for n in range (len(lettres)): # comparaison de la lettre de la cle avec toute les lettres de notre alphabet
@@ -30,8 +29,7 @@ def cleOk(clef):
             return False
     return True
 
-def messageOk(message):
-    message = forme(message) # formalisation du message
+def messageOk(message: str) -> bool:
     for i in message:
         ok = False
         for n in range (len(lettres)): # comparaison de la lettre du message avec toute les lettres de notre alphabet
@@ -43,23 +41,8 @@ def messageOk(message):
     return True
 
 
-def forme(phrase):
-    phrase = phrase.replace('é','e')
-    phrase = phrase.replace('è','e')
-    phrase = phrase.replace('à','a')
-    phrase = phrase.replace('â','a')
-    phrase = phrase.replace('ù','u')
-    phrase = phrase.replace('ï','i')
-    phrase = phrase.replace('ê','e')
-    phrase = phrase.replace('ô','o')
-    phrase = phrase.replace('ç','c')
-    phrase = phrase.upper()
-    return phrase
 
-
-def crypter(phrase, clef):
-    phrase = forme(phrase)
-    clef = clef.upper()
+def crypter(phrase: str, clef: str) -> str:
     rang = 0
     nouvelPhrase = ''
     while rang < len(phrase):
@@ -70,9 +53,7 @@ def crypter(phrase, clef):
     return nouvelPhrase
 
 
-def decrypter(phrase,clef):
-    phrase = phrase.upper()
-    clef = clef.upper()
+def decrypter(phrase: str, clef: str) -> str:
     rang = 0
     nouvelPhrase = ''
     while rang < len(phrase):
@@ -83,7 +64,7 @@ def decrypter(phrase,clef):
     return nouvelPhrase
 
 
-def clefSession(clef1,clef2):
+def clefSession(clef1: str,clef2: str) -> str:
     ks = '' # initialisation de la clef de session
     if (len(clef1) > len(clef2)): 
         longeurClef = random.randint(len(clef2), len(clef1)) # creation de la longeur de la cle de session
