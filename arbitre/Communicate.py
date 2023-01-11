@@ -65,7 +65,7 @@ def process_T1(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool:
 
     msg_split = msg.split(',')
     if len(msg_split) > 3 and msg_split[2] == 'T1':
-        nom_util = msg_split[0].upper()
+        nom_util = msg_split[0]
         nom_arbitre = msg_split[1]
         cle = msg_split[3]
         ip = addr[0]
@@ -106,7 +106,7 @@ def process_classic(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool
 
     msg_splitted = msg.split(',')
     if len(msg_splitted) >= 2 and msg_splitted[1] == nom_arbitre:
-        nom_utilisateur = msg_splitted[0].upper()
+        nom_utilisateur = msg_splitted[0]
         cle_chiffrement = Database.get_key(nom_utilisateur)
 
         if cle_chiffrement is not None:
@@ -154,7 +154,7 @@ def process_T4(msg: str, addr: tuple[str, int], sck: socket.socket) -> None:
         if msg_dechiffre[-2:] == 'T4':
             msg_split = msg_dechiffre.split(',')
             if len(msg_split) == 4 and msg_split[1] == nom_arbitre:
-                util_a = msg_split[0].upper()
+                util_a = msg_split[0]
                 if key == Database.get_key(util_a):
                     cle_trouve = True
                     print('Traitement du message T4 de ' + util_a + ' (' + msg + ')')
@@ -249,7 +249,7 @@ def T4_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket):
     :return: None
     """
     msg_split = msg.split(',')
-    user_b = msg_split[2].upper()
+    user_b = msg_split[2]
 
     user_a_key = Database.get_key(user)
     user_b_key = Database.get_key(user_b)
@@ -293,7 +293,7 @@ def T6_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket) -
     msg_decode = msg.split(',')
 
     if len(msg_decode) == 2 and user_key is not None:
-        util_b = msg_decode[1].upper()
+        util_b = msg_decode[1]
         util_b_addr = Database.get_addr(util_b)
         if util_b_addr is not None:
             msg = util_b + ',' + util_b_addr[0] + ',' + str(util_b_addr[1]) + ',T6'
