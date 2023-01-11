@@ -4,6 +4,8 @@ import Communicate
 from Cryptage import cleOk
 import threading as th
 from SimpleReceiver import SimpleReceiver
+import socket
+import re
 
 
 class Utilisateur:
@@ -38,6 +40,7 @@ class Utilisateur:
     def __del__(self):
         self._receiver.terminate()
         self.socket.close()
+
 
 # ------------------ Main ------------------
 
@@ -185,6 +188,7 @@ def accepter_refuser_demande():
                                   + utilisateur.nom_destinataire + ' ?')
     return fenetre.show()
 
+
 def actions():
     """
     Fonction qui gère les actions de l'utilisateur effectuées depuis la fenêtre principale
@@ -241,12 +245,65 @@ def actions():
             print('Action inconnue')
 
 
+def ask_ip() -> tuple[str, int]:
+    """
+    Permet de demander l'ip et le port de l'arbitre
+    :return:
+    """
+
+    ipRgx = re.compile(r"^((1?[0-9]{1,2}|2[0-4][0-9]|25[0-5]).){3}(1?[0-9]{1,2}|2[0-4][0-9]|25[0-5])$|^localhost$")
+    ipport = Windows.SimpleInputWindow('IP et port de l\'arbitre',
+                                       'Entrez l\'ip et le port de l\'arbitre \n (IP:PORT, port facultatif)').show()
+    compErreur = 0
+    while not ipRgx.match(ipport):
+        ipport = Windows.SimpleInputWindow('IP et port de l\'arbitre',
+                                           'Entrez l\'ip et le port de l\'arbitre \n (IP:PORT, port facultatif)').show()
+        compErreur += 1
+        if compErreur == 5:
+            Windows.ErrorWindow('Trop de tentatives').show()
+            break
+
+    if ipport is not None:
+        if ipport.find(':') != -1:
+            ip, port = ipport.split(':')
+            try:
+                port = int(port)
+                ok = True
+            except ValueError:
+                ok = False
+        else:
+            ip = ipport
+            port = 5000
+            ok = True
+
+        if ok:
+            sck = Utils.creer_socket()
+            sck.settimeout(5)
+            try:
+                sck.sendto(b'PING', (ip, port))
+                sck.recvfrom(1024)
+                sck.close()
+            except socket.timeout:
+                ok = False
+                Windows.ErrorWindow('Impossible de se connecter à l\'arbitre').show()
+                ip, port = None, None
+
+        return ip, port
+
+
 if __name__ == '__main__':
+
+    ip, port = None, None
+
+    while ip is None:
+        ip, port = ask_ip()
+
     username = connexion()
     utilisateur = Utilisateur()
 
     if username is not None:
         utilisateur.nom = username
+        utilisateur.addr_arbitre = (ip, port)
         actions()
 
     utilisateur.__del__()
