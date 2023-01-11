@@ -33,6 +33,7 @@ class Utilisateur:
 
         # --- Informations relatives a la fenêtre de communication ---
         self.communication_window = None
+        self.msg_attente = []
 
     def __del__(self):
         self._receiver.terminate()
@@ -51,12 +52,12 @@ def connexion():
     return name
 
 
-def menu_principal(client, msg_info):
+def menu_principal(client, msg_info, couleur):
     """
     Fonction qui affiche la fenêtre principale de l'application
     :return:
     """
-    client.main_menu = Windows.Menu(client, msg_info)
+    client.main_menu = Windows.Menu(client, msg_info, couleur)
     action = client.main_menu.show()
     client.main_menu = None
     return action
@@ -149,9 +150,11 @@ def demarrer_communication_initialisateur():
                 # accepte la demande
                 utilisateur.communication_window = Windows.DiscussWindow(utilisateur)
                 utilisateur.communication_window.show_waiting_text()
-                a_communique = utilisateur.communication_window.show()
+                utilisateur.communication_window.show()
+                a_communique = True
 
                 utilisateur.communication_window = None
+                utilisateur.ks = None
     return a_communique
 
 
@@ -167,6 +170,8 @@ def rejoindre_communication():
     utilisateur.communication_window.show()
 
     utilisateur.communication_window = None
+    utilisateur.ks = None
+    Communicate.set_status('idle')
 
 
 def accepter_refuser_demande():
@@ -185,8 +190,9 @@ def actions():
     """
     end = False
     msg_info = ''
+    couleur = 'green'
     while not end:
-        action = menu_principal(utilisateur, msg_info)
+        action = menu_principal(utilisateur, msg_info, couleur)
         msg_info = ''
 
         if action == 'quit':
@@ -196,16 +202,20 @@ def actions():
             print('Création de la clé')
             if creation_cle():
                 msg_info = 'Clé créée avec succès'
+                couleur = 'green'
+
 
         elif action == 'editKey':
             print('Modification de la clé')
             if creation_cle(update=True):
                 msg_info = 'Clé modifiée avec succès'
+                couleur = 'green'
 
         elif action == 'delKey':
             print('Suppression de la clé')
             if supression_cle():
                 msg_info = 'Clé supprimée avec succès'
+                couleur = 'green'
 
         elif action == 'communiquer':
             print('Communiquer')
@@ -221,7 +231,8 @@ def actions():
 
             else:
                 if not demarrer_communication_initialisateur():
-                    msg_info = 'La communication a été refusée'
+                    msg_info = 'Le nom du destinataire n\'existe pas '
+                    couleur = 'red'
 
         else:
             print('Action inconnue')
