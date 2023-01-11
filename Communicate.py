@@ -135,15 +135,16 @@ def process_edit_key(msg, nv_cle, ancienne_cle):
 
     print('process_edit_key')
 
-    decrypt_nv_cle = Cryptage.decrypter(msg, nv_cle).split(',')[-1]
-    decrypt_ancienne_cle = Cryptage.decrypter(msg, ancienne_cle).split(',')[-1]
+    if nv_cle is not None and ancienne_cle is not None:
+        decrypt_nv_cle = Cryptage.decrypter(msg, nv_cle).split(',')[-1]
+        decrypt_ancienne_cle = Cryptage.decrypter(msg, ancienne_cle).split(',')[-1]
 
-    if decrypt_ancienne_cle == 'T2':
-        retour_infos.put(False)
-    elif decrypt_nv_cle == 'T2':
-        retour_infos.put(True)
-    else:
-        retour_infos.put(False)
+        if decrypt_ancienne_cle == 'T2':
+            retour_infos.put(False)
+        elif decrypt_nv_cle == 'T2':
+            retour_infos.put(True)
+        else:
+            retour_infos.put(False)
 
 
 def process_delete_key(msg, cle):
@@ -231,7 +232,7 @@ def process_init_dialog(msg, client):
         partie_a_envoyer = decrypt_msg[position_fin_ks:]
 
         set_status('waitAccept')
-        client.socket.sendto(partie_a_envoyer.encode(), client.addr_destinataire)
+        client.socket.sendto(partie_a_envoyer.encode(), client.addr_arbitre)
 
         retour_infos.put(True)
         
@@ -255,6 +256,8 @@ def process_demande_dialog(msg, client, emetteur):
     cle = client.cle
     nom_client = client.nom
     nom_arbitre = client.nom_arbitre
+
+    print("DEBUG :", cle, nom_client, nom_arbitre)
 
     if cle is not None and nom_client is not None and nom_arbitre is not None:
         decrypt_msg = Cryptage.decrypter(msg, cle)
@@ -313,7 +316,6 @@ def process_discuss(msg, client):
 
     if client.communication_window is not None:
         cle = client.ks
-        nom_client = client.nom
 
         msg_decrypt = Cryptage.decrypter(msg, cle)
         client.communication_window.queue_recv.put(msg_decrypt)
@@ -411,7 +413,7 @@ def demander_ks(client):
     return retour_infos.get()
 
 
-def demander_coordonnees(client):
+def demander_coordonnees(client):  # TODO : a supprimer
     """
     Permet d'envoyer au serveur le message de demande de coordonnées d'un autre client.
 
@@ -461,7 +463,7 @@ def accepter_refuser_dialogue(client, accepter):
         msg_crypt = 'T5,' + msg_base
 
     msg_crypt = Cryptage.crypter(msg_crypt, ks)
-    client.socket.sendto(msg_crypt.encode(), client.addr_destinataire)
+    client.socket.sendto(msg_crypt.encode(), client.addr_arbitre)
 
 
 def envoyer_message(client, message):
@@ -471,11 +473,8 @@ def envoyer_message(client, message):
     :param message: Le message à envoyer a B
     :return: None
     """
-
     cle = client.ks
-    nom_utilisateur = client.nom
-    nom_destinataire = client.nom_destinataire
 
     msg_crypt = Cryptage.crypter(message, cle)
 
-    client.socket.sendto(msg_crypt.encode(), client.addr_destinataire)
+    client.socket.sendto(msg_crypt.encode(), client.addr_arbitre)

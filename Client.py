@@ -141,17 +141,17 @@ def demarrer_communication_initialisateur():
     if nom_destinataire is not None:
         utilisateur.nom_destinataire = nom_destinataire
         # Demande à l'arbitre des coordonnées du destinataire
-        if Communicate.demander_coordonnees(utilisateur):
-            print("JAI LES COORDONNES")
+        # if Communicate.demander_coordonnees(utilisateur):
+        #     print("JAI LES COORDONNES")
             # Demande à l'arbitre de la clé de session (KS)
-            if Communicate.demander_ks(utilisateur):
-                # L'arbitre a accepté la demande, on affiche la fenêtre de communication pendant que l'utilisateur B
-                # accepte la demande
-                utilisateur.communication_window = Windows.DiscussWindow(utilisateur)
-                utilisateur.communication_window.show_waiting_text()
-                a_communique = utilisateur.communication_window.show()
+        if Communicate.demander_ks(utilisateur):
+            # L'arbitre a accepté la demande, on affiche la fenêtre de communication pendant que l'utilisateur B
+            # accepte la demande
+            utilisateur.communication_window = Windows.DiscussWindow(utilisateur)
+            utilisateur.communication_window.show_waiting_text()
+            a_communique = utilisateur.communication_window.show()
 
-                utilisateur.communication_window = None
+            utilisateur.communication_window = None
     return a_communique
 
 
