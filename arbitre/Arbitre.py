@@ -24,7 +24,7 @@ def create_socket():
         print('WARN : Le serveur écoute sur toutes les interfaces réseau !')
         # Liste de toutes les ip sur lesquelles le serveur écoute
         for ip in socket.gethostbyname_ex(socket.gethostname())[2]:
-            print(' - ', ip)
+            print(' - ', ip + ':' + str(listening_port))
     else:
         print("Serveur démarré sur", socket.gethostbyname(socket.gethostname()) + ':' + str(listening_port))
     return sck
