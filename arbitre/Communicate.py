@@ -1,5 +1,4 @@
 import socket
-
 import Database
 import Cryptage
 
@@ -7,36 +6,48 @@ end = False
 nom_arbitre = 'C'
 
 
-def recv(socket):
+def recv(socket: socket.socket) -> None:
     """
     Fonction qui permet de recevoir en boucle les messages des clients
     :param socket: Le socket de connexion
     :return: Le message reçu
     """
 
+    lte_fn = [process_ping, process_T1, process_classic, process_T4]
+
     while not end:
         msg, addr = socket.recvfrom(1024)
         msg = msg.decode()
         if not end:
-            process_ping(msg, addr, socket)
-            process_T1(msg, addr, socket)
-            process_classic(msg, addr, socket)
-            process_T4(msg, addr, socket)
+            traite = False
+            for fn in lte_fn:
+                if fn(msg, addr, socket):
+                    traite = True
+                    Database.desactiver_communication(addr)
+                    break
+            if not traite:
+                if envoi_message(msg, addr, socket):
+                    pass
+                else:
+                    print("WARN :", addr, "a envoyé un message qui n'a pas été traité / envoyé a son destinataire (" + msg + ")")
 
 
-def process_ping(msg, addr, sck):
+def process_ping(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool:
     """
     Permet de traiter un message de type ping (utilisé par les clients pour tester si le serveur est en ligne)
     :param msg: le message reçu
     :param addr: l'adresse du client
     :param sck: Le socket à utiliser pour l'envoi
-    :return: None
+    :return: True si le message a été traité par cette partie, false sinon
     """
+    traite = False
     if msg.upper() == 'PING':
         sck.sendto(b'PONG', addr)
+        traite = True
+    return traite
 
 
-def process_T1(msg, addr, sck):
+def process_T1(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool:
     """
     S'occupe du traitement de tous les messages de type T1 (création d'une nouvelle clé)
 
@@ -48,8 +59,9 @@ def process_T1(msg, addr, sck):
     :param msg: Le message reçu
     :param addr: L'adresse du client
     :param sck: Le socket à utiliser pour l'envoi
-    :return: None
+    :return: true si le message a été traité, false sinon
     """
+    traite = False
 
     msg_split = msg.split(',')
     if len(msg_split) > 3 and msg_split[2] == 'T1':
@@ -72,8 +84,11 @@ def process_T1(msg, addr, sck):
             msg = nom_arbitre + ',' + nom_util + ',T1'
             sck.sendto(msg.encode(), addr)
 
+        traite = True
+    return traite
 
-def process_classic(msg, addr, sck):
+
+def process_classic(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool:
     """
     Permet de vérifier qu'un message donné est bien du type T2, T3 ou T6. Si c'est le cas, lance l'exécution du message
     par le serveur
@@ -85,8 +100,9 @@ def process_classic(msg, addr, sck):
     :param msg: Le message reçu
     :param addr: L'adresse du client
     :param sck: Le socket à utiliser pour l'envoi
-    :return: None
+    :return: true si le message a été traité, false sinon
     """
+    traite = False
 
     msg_splitted = msg.split(',')
     if len(msg_splitted) >= 2 and msg_splitted[1] == nom_arbitre:
@@ -102,15 +118,19 @@ def process_classic(msg, addr, sck):
             if dechiffre[:2] == 'T2':
                 print('Traitement du message T2 de ' + nom_utilisateur + ' (' + msg + ')')
                 T2_execute(dechiffre, nom_utilisateur, addr, sck)
+                traite |= True
             elif dechiffre[:2] == 'T3':
                 print('Traitement du message T3 de ' + nom_utilisateur + ' (' + msg + ')')
                 T3_execute(dechiffre, nom_utilisateur, addr, sck)
+                traite |= True
             elif dechiffre[:2] == 'T6':
                 print('Traitement du message T6 de ' + nom_utilisateur + ' (' + msg + ')')
                 T6_execute(dechiffre, nom_utilisateur, addr, sck)
+                traite |= True
+    return traite
 
 
-def process_T4(msg, addr, sck):
+def process_T4(msg: str, addr: tuple[str, int], sck: socket.socket) -> None:
     """
     Permet de vérifier qu'un message donné est bien du type T4. Si c'est le cas, lance l'exécution du message
     par le serveur
@@ -143,7 +163,8 @@ def process_T4(msg, addr, sck):
                     print("WARN : " + util_a + " a envoyé un message T4 qui a été déchiffré avec une autre clé que la sienne")
         index = index + 1
 
-def T2_execute(msg, user, addr, sck):
+
+def T2_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket) -> None:
     """
     Fonction utilisée par process_classic et qui s'occupe de mettre à jour la clé de l'utilisateur en vérifiant
     que le message reçu soit valide
@@ -156,7 +177,6 @@ def T2_execute(msg, user, addr, sck):
     :param user: L'utilisateur qui a envoyé ce message
     :param addr: L'adresse du client
     :param sck: Le socket à utiliser pour l'envoi
-    :return: None
     """
 
     decode_split = msg.split(',')
@@ -177,7 +197,7 @@ def T2_execute(msg, user, addr, sck):
     sck.sendto(msg.encode(), addr)
 
 
-def T3_execute(msg, user, addr, sck):
+def T3_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket) -> None:
     """
     Fonction utilisée par process_classic et qui s'occupe de supprimer la clé de l'utilisateur en vérifiant
     que le message reçu soit valide
@@ -213,10 +233,10 @@ def T3_execute(msg, user, addr, sck):
         sck.sendto(msg.encode(), addr)
 
 
-def T4_execute(msg, user, addr, sck):
+def T4_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket):
     """
     Fonction utilisée par process_T4 et qui s'occupe d'exécuter le message T4 une fois que sa clé a été trouvée
-    (Début de discussion entre 2 utilisateur, génération de KS)
+    (Début de discussion entre 2 utilisateurs, génération de KS)
 
     Envoi Eclef_A<Nom de l’arbitre, Nom utilisateur A, T4, Ks, Eclef_B<Nom de l’arbitre, Nom utilisateur A, Nom utilisateur B, Ks>>
     si l'utilisateur B a été trouvé, sinon envoi de Eclef_A<Nom de l’arbitre, Nom utilisateur A, T4>
@@ -244,6 +264,9 @@ def T4_execute(msg, user, addr, sck):
         msg = nom_arbitre + ',' + user + ',T4,' + ks + ',' + msg_partie_b
         msg = Cryptage.crypter(msg, user_a_key)
         sck.sendto(msg.encode(), addr)
+
+        Database.set_destinataire(user, user_b)
+        Database.set_destinataire(user_b, user)
     else:
         # Envoi du message Eclef_A<Nom de l’arbitre, Nom utilisateur A, T4>
         msg = nom_arbitre + ',' + user + ',T4'
@@ -251,7 +274,7 @@ def T4_execute(msg, user, addr, sck):
         sck.sendto(msg.encode(), addr)
 
 
-def T6_execute(msg, user, addr, sck):
+def T6_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket) -> None:
     """
     Fonction utilisée par process_classic et qui s'occupe d'envoyer à l'expéditeur du message les coordonnées
     (IP:PORT) de l'utilisateur demandé (utilisateur B)
@@ -279,6 +302,30 @@ def T6_execute(msg, user, addr, sck):
         msg = Cryptage.crypter(msg, user_key)
 
         sck.sendto(msg.encode(), addr)
+
+
+def envoi_message(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool:
+    """
+    Permet l'envoi d'un message de l'utilisateur A vers l'utilisateur B.
+    :param msg: Le message à transférer
+    :param addr: L'adresse de l'utilisateur A
+    :param sck: Le socket à utiliser pour l'envoi
+    :return: true si l'envoi a été effectué, false sinon
+    """
+
+    envoye = False
+
+    nom_util = Database.get_username(addr)
+    if nom_util is not None:
+        nom_destinataire = Database.get_destinataire(nom_util)
+        if nom_destinataire is not None:
+            addr_dest = Database.get_addr(nom_destinataire)
+            if addr_dest is not None:
+                print(addr_dest)
+                sck.sendto(msg.encode(), addr_dest)
+                envoye = True
+
+    return envoye
 
 
 
