@@ -38,7 +38,6 @@ def get_window_pos(evt: tkinter.Event) -> None:
     if (evt.x, evt.y) not in banned_coords:
         widget: tkinter.Widget = evt.widget
         middle_win_pos = evt.x + widget.winfo_width() / 2, evt.y + widget.winfo_height() / 2
-        print(middle_win_pos)
 
 
 def set_location(window: sg.Window) -> None:
@@ -281,6 +280,7 @@ class DiscussWindow:
         """
         self.__window['btn_send'].update(disabled=False)
         self.__window['input'].update(disabled=False)
+        self.__window.bind('<Return>', 'btn_send')
 
     def show(self):
         """
@@ -292,21 +292,27 @@ class DiscussWindow:
         from Communicate import envoyer_message
         end = False
 
+        # On rattrape les potentiels messages envoyés pendant que le fenêtre était fermée
+        for msg in self.client.msg_attente:
+            self.__print_msg(self.__destinataire, msg)
+        self.client.msg_attente = []
+
         while not end:
             event, values = self.__window.read()
-            if event == 'btn_quit':
+            if event == 'btn_quit' or event == sg.WIN_CLOSED:
+                envoyer_message(self.client, 'A quitté le salon de discussion')
+
                 end = True
             elif event == 'btn_send':
                 envoyer_message(self.client, values['input'])
                 self.__print_msg(self.__expediteur, values['input'])
                 self.__window['input'].update('')
-            elif event == sg.WIN_CLOSED:
-                end = True
         self.close()
 
     def close(self):
         self.queue_recv.put(None)  # Pour que le thread de réception se termine proprement (On débloque la fn bloquante)
         self.__window.close()
+        print("Fenetre communication fermee")
 
 
 class YesNoWindow:
@@ -316,7 +322,7 @@ class YesNoWindow:
     def __init__(self, title, text):
         self.layout = [
             [sg.Text(text)],
-            [sg.Button('Oui', key='btn_yes'), sg.Push(), sg.Button('Non', key='btn_no')]
+            [sg.Button('Non', key='btn_no'), sg.Push(), sg.Button('Oui', key='btn_yes')]
         ]
         self.window = sg.Window(title, self.layout, finalize=True, scaling=scaling)
         set_location(self.window)
@@ -368,10 +374,11 @@ class Menu:
     Menu - Fenêtre principale de l'application
     """
 
-    def __init__(self, client, msg_info=''):
+    def __init__(self, client, msg_info='', couleur='green'):
         """
         :param client: Le client, utilisé pour toggle les boutons
         :param msg_info: Message d'information à afficher
+        :param couleur: Couleur du message a afficher
         """
 
         self.client = client
@@ -380,13 +387,13 @@ class Menu:
         self.layout = []
         if msg_info != '':
             self.layout.append([
-                sg.Push(), sg.Text(('INFO : ' + msg_info), text_color='green'), sg.Push()
+                sg.Push(), sg.Text(('INFO : ' + msg_info), text_color=couleur), sg.Push()
             ])
 
         self.layout += [  # += --> Append toute la liste à self.layout
             [sg.Button('Créer votre clé', key='btn_createKey', size=(15, 1)), sg.Button('Modifier votre clé', key='btn_editKey', size=(15, 1))],
             [sg.Button('Supprimer votre clé', key='btn_delKey', size=(15, 1)), sg.Button('Communiquer', key='btn_communiquer', size=(15, 1))],
-            [sg.Button('Quitter', key='btn_quit', size=(32, 1))]
+            [sg.Button('Quitter', key='btn_quit', size=(31, 1))]
         ]
 
         title = 'Menu - ' + client.nom
@@ -404,7 +411,7 @@ class Menu:
         :return None
         """
         print("UPDATE CONN BTN")
-        if self.client.demande_connexion:
+        if self.client.demande_connexion and self.client.cle is not None:
             self.window['btn_communiquer'].update(button_color=(None, 'green'))
         else:
             self.window['btn_communiquer'].update(button_color=(None, sg.theme_button_color_background()))

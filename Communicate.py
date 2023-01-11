@@ -41,24 +41,25 @@ def process_msg(queue, client):
         print('Message reçu : ' + msg)
         print('status : ' + status)
 
+
         if msg != 'end':
             process_errors(msg)
-            process_demande_dialog(msg, client, emetteur)
+            msg_traite = process_demande_dialog(msg, client, emetteur)
 
             if status == 'createKey':
-                process_create_key(msg, client.temp_cle)
+                msg_traite |= process_create_key(msg, client.temp_cle)
 
             elif status == 'editKey':
-                process_edit_key(msg, client.temp_cle, client.cle)
+                msg_traite |= process_edit_key(msg, client.temp_cle, client.cle)
 
             elif status == 'deleteKey':
-                process_delete_key(msg, client.cle)
+                msg_traite |= process_delete_key(msg, client.cle)
 
             elif status == 'initDialog':
-                process_init_dialog(msg, client)
+                msg_traite |= process_init_dialog(msg, client)
 
             elif status == 'getCoord':
-                process_get_coord(msg, client)
+                msg_traite |= process_get_coord(msg, client)
 
             elif status == 'waitAccept':
                 process_accept_refuse_dialog(msg, client)
@@ -67,7 +68,16 @@ def process_msg(queue, client):
                 process_discuss(msg, client)
 
             else:
-                print('WARN : Un message reçu par ' + emetteur + ' n\'a pas été traité (' + msg + ')')
+                print('WARN : Un message reçu par ' + str(emetteur) + ' n\'a pas été traité (' + msg + ')')
+
+            # On log les messages si on est pas encore dans la fenêtre de discussion mais qu'un échange a voulu être
+            # démarré par un autre utilisateur
+            if not msg_traite and status != status_list[-1] and client.ks is not None:
+                msg_decrypt = Cryptage.decrypter(msg, client.ks)
+                client.msg_attente.append(msg_decrypt)
+                print("JAI LE MESSAGE")
+
+            print("DEBUGGGGGGGG", str(msg_traite), status, client.ks)
 
         else:
             end = True
@@ -101,8 +111,9 @@ def process_create_key(msg, cle):
 
     :param msg: Le message reçus par le serveur
     :param cle: La clé saisie par l'utilisateur
-    :return: None
+    :return: True si le message a été traité par cette fonction, False sinon
     """
+    traite = False
 
     if cle is not None:
         print('process_create_key')
@@ -111,10 +122,16 @@ def process_create_key(msg, cle):
 
         if crypte == 'T1':
             retour_infos.put(False)
+            traite = True
         elif clair == 'T1':
             retour_infos.put(True)
+            traite = True
         else:
             retour_infos.put(False)
+
+    set_status('idle')
+
+    return traite
 
 
 def process_edit_key(msg, nv_cle, ancienne_cle):
@@ -130,8 +147,9 @@ def process_edit_key(msg, nv_cle, ancienne_cle):
     :param msg: Le message reçu par le serveur
     :param nv_cle: La nouvelle clé saisie par l'utilisateur
     :param ancienne_cle: L'ancienne clé saisie par l'utilisateur
-    :return: None
+    :return: True si le message a été traité par cette fonction, False sinon
     """
+    traite = False
 
     print('process_edit_key')
 
@@ -141,11 +159,16 @@ def process_edit_key(msg, nv_cle, ancienne_cle):
 
         if decrypt_ancienne_cle == 'T2':
             retour_infos.put(False)
+            traite = True
         elif decrypt_nv_cle == 'T2':
             retour_infos.put(True)
+            traite = True
         else:
             retour_infos.put(False)
 
+    set_status('idle')
+
+    return traite
 
 def process_delete_key(msg, cle):
     """
@@ -158,17 +181,22 @@ def process_delete_key(msg, cle):
 
     :param msg: Le message reçu par le serveur
     :param cle: La clé saisie par l'utilisateur
-    :return: None
+    :return: True si le message a été traité par cette fonction, False sinon
     """
-
+    traite = False
     print('process_delete_key')
 
     decrypt_cle = Cryptage.decrypter(msg, cle).split(',')[-1]
 
     if decrypt_cle == 'T3':
         retour_infos.put(True)
+        traite = True
     else:
         retour_infos.put(False)
+
+    set_status('idle')
+
+    return traite
 
 
 def process_get_coord(msg, client):
@@ -182,8 +210,9 @@ def process_get_coord(msg, client):
 
     :param msg: Le message à traiter
     :param client: l'objet de type client
-    :return: None
+    :return: true si le message a été traité, false sinon
     """
+    msg_traite = False
     cle = client.cle
 
     msg_decrypt = Cryptage.decrypter(msg, cle)
@@ -191,11 +220,15 @@ def process_get_coord(msg, client):
 
     if len(msg_split) == 2 and msg_split[-1] == 'T6':
         retour_infos.put(False)
+        msg_traite = True
     elif len(msg_split) == 4 and msg_split[-1] == 'T6':
         ip = msg_split[1]
         port = msg_split[2]
         client.addr_destinataire = (ip, int(port))
         retour_infos.put(True)
+        msg_traite = True
+
+    return msg_traite
 
 
 def process_init_dialog(msg, client):
@@ -211,19 +244,19 @@ def process_init_dialog(msg, client):
     :param msg: Le message reçu par le serveur
     :param cle: La clé de l'utilisateur
     :param socket: Le socket à utiliser pour envoyer le message vers l'utilisateur B
-    :return: None
+    :return: true si le message a été traité, false sinon
     """
+    traite = False
 
     print('process_init_dialog')
     cle = client.cle
-    nom_client = client.nom
-    nom_arbitre = client.nom_arbitre
 
     decrypt_msg = Cryptage.decrypter(msg, cle)
     msg_split = decrypt_msg.split(',')
 
     if len(msg_split) == 3 and msg_split[-1] == 'T4':
         retour_infos.put(False)
+        traite = True
     elif len(msg_split) >= 4 and msg_split[2] == 'T4':
         ks = msg_split[3]
         client.ks = ks
@@ -235,6 +268,9 @@ def process_init_dialog(msg, client):
         client.socket.sendto(partie_a_envoyer.encode(), client.addr_arbitre)
 
         retour_infos.put(True)
+        traite = True
+        #set_status('idle')
+    return traite
         
         
 def process_demande_dialog(msg, client, emetteur):
@@ -250,8 +286,9 @@ def process_demande_dialog(msg, client, emetteur):
     :param msg: Le message reçu de A
     :param client: L'objet utilisateur contenant les informations de l'utilisateur B
     :param emetteur: Les coordonnées (IP, PORT) de l'utilisateur A
-    :return: None
+    :return: True si le message a été traité, false sinon
     """
+    traite = False
 
     cle = client.cle
     nom_client = client.nom
@@ -264,7 +301,7 @@ def process_demande_dialog(msg, client, emetteur):
         msg_split = decrypt_msg.split(',')
 
         if len(msg_split) == 4:
-            if msg_split[2].upper() == nom_client.upper() and msg_split[0].upper() == nom_arbitre.upper():
+            if msg_split[2] == nom_client and msg_split[0] == nom_arbitre:
                 client.addr_destinataire = emetteur
                 client.nom_destinataire = msg_split[1]
                 client.ks = msg_split[3]
@@ -273,6 +310,8 @@ def process_demande_dialog(msg, client, emetteur):
                     client.main_menu.update_conn_btn()
                 except Exception:  # Exception levée si la fenêtre principale n'est pas ouverte
                     pass
+            traite = True
+    return traite
 
 
 def process_accept_refuse_dialog(msg, client):
@@ -292,18 +331,17 @@ def process_accept_refuse_dialog(msg, client):
     :return: None
     """
     cle = client.ks
-    nom_client = client.nom
-    nom_destinataire = client.nom_destinataire
 
-    decrypt_msg = Cryptage.decrypter(msg, cle)
-    if decrypt_msg[-2:] == 'T5':
-        client.communication_window.show_welcome_text()
-        client.communication_window.enable_communication()
-        set_status('discuss')
-    else:
-        client.communication_window.close()
-        print("CEST LE STOMP !")
-
+    if cle is not None:
+        decrypt_msg = Cryptage.decrypter(msg, cle)
+        if client.communication_window is not None:
+            if decrypt_msg[-2:] == 'T5':
+                client.communication_window.show_welcome_text()
+                client.communication_window.enable_communication()
+                set_status('discuss')
+            else:
+                client.communication_window.queue_recv.put("A refuse la demande de communication")
+                set_status('idle')
 
 def process_discuss(msg, client):
     """
