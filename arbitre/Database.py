@@ -35,7 +35,6 @@ def create_key(nom, clef, ip, port):
     :param port: port de l'utilisateur
     :return: True si la clé a été créée, False sinon
     """
-    clef = clef.upper()
     retour = cleOk(clef)
 
     if retour:
@@ -59,7 +58,6 @@ def update_key(nom, clef):
     :param clef: nouvelle clef de l'utilisateur
     :return: True si la clé a été mise à jour, False sinon
     """
-    clef = clef.upper()
     retour = cleOk(clef)
 
     if retour:
