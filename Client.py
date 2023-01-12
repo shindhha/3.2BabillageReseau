@@ -245,37 +245,47 @@ def actions():
             print('Action inconnue')
 
 
-def ask_ip() -> tuple[str, int]:
+def ask_ip() -> tuple[str, int] | tuple["False", int] :
     """
-    Permet de demander l'ip et le port de l'arbitre
-    :return:
+    Permet de demander l'ip et le port de l'arbitre et de tester le bind de la socket au serveur
+    :return: Si IP et PORT correctent alors on renvoie un tuple avec l'ip et le port
+             sinon on renvoie un tuple avec "False" et le port
     """
 
     ipRgx = re.compile(r"^((1?[0-9]{1,2}|2[0-4][0-9]|25[0-5]).){3}(1?[0-9]{1,2}|2[0-4][0-9]|25[0-5])$|^localhost$")
-    ipport = Windows.SimpleInputWindow('IP et port de l\'arbitre',
-                                       'Entrez l\'ip et le port de l\'arbitre \n (IP:PORT, port facultatif)').show()
-    compErreur = 0
-    while not ipRgx.match(ipport):
-        ipport = Windows.SimpleInputWindow('IP et port de l\'arbitre',
-                                           'Entrez l\'ip et le port de l\'arbitre \n (IP:PORT, port facultatif)').show()
-        compErreur += 1
-        if compErreur == 5:
-            Windows.ErrorWindow('Trop de tentatives').show()
-            break
+
+    tentative = 0
+    ip = "False"
+    port = 5000
+    while not ipRgx.match(ip):
+        ipport = Windows.SimpleInputWindow('Saisie des coordonnées',
+                                           'Entrez l\'ip et le port de l\'arbitre \n(IP:PORT, port facultatif)').show()
+        if ipport is not None:
+            if ipport.find(':') != -1:
+                ip, port = ipport.split(':')
+                try:
+                    port = int(port)
+                    ok = True
+                except ValueError:
+                    tentative += 1
+                    ok = False
+            else:
+                ip = ipport
+                port = 5000
+                ok = True
+
+        # Test si trop de tentatives effectuée
+        if tentative == 5:
+            ip = "False"
+            Windows.ErrorWindow('Trop de tentatives effectuées').show()
+            return ip, port
+        elif ipport is None:
+            ip = "False"
+            return ip, port
+
+        tentative += 1
 
     if ipport is not None:
-        if ipport.find(':') != -1:
-            ip, port = ipport.split(':')
-            try:
-                port = int(port)
-                ok = True
-            except ValueError:
-                ok = False
-        else:
-            ip = ipport
-            port = 5000
-            ok = True
-
         if ok:
             sck = Utils.creer_socket()
             sck.settimeout(5)
@@ -294,16 +304,22 @@ def ask_ip() -> tuple[str, int]:
 if __name__ == '__main__':
 
     ip, port = None, None
+    ipCorrect = True
 
     while ip is None:
         ip, port = ask_ip()
+        # Test si trop d'erreur
+        if ip == "False":
+            ipCorrect = False
+            break
 
-    username = connexion()
-    utilisateur = Utilisateur()
+    if ipCorrect:
+        username = connexion()
+        utilisateur = Utilisateur()
 
-    if username is not None:
-        utilisateur.nom = username
-        utilisateur.addr_arbitre = (ip, port)
-        actions()
+        if username is not None:
+            utilisateur.nom = username
+            utilisateur.addr_arbitre = (ip, port)
+            actions()
 
-    utilisateur.__del__()
+        utilisateur.__del__()

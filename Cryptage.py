@@ -9,7 +9,7 @@ accent = ['é','è','ë','ê','à','â','ä','û','ü','ù','ï','î','ö','ô',
 # creation du dictionnaire contenant l'alphabet utiliser pour le cryptage / decryptage
 for i in range (32 , 92):
     lettres[i - 32] = chr (i)
-# esclusion du carcater '\'
+# esclusion du carcatere '\'
 for i in range (93 , 123):
     lettres[i - 32 - 1] = chr (i)
 
