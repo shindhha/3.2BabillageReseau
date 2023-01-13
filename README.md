@@ -1,7 +1,7 @@
 # 3.2BabillageReseau
 # FR
 # Description
-logiciel de discussion dans un intranet fermer permetant d'envoyer des message crypter a un correspondant choisi
+L’objectif de ce projet est de mettre en place un logiciel qui servira à communiquer de manière totalement sécurisée grâce au cryptage de Vigenère entre deux personnes par l'intermédiaire d’un serveur. 
 # Rôles
 Laurie Clément -> Développeur <br/>
 Lala Antoine -> Développeur <br/>
