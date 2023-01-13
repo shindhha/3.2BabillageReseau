@@ -296,6 +296,7 @@ def ask_ip(sck: FiableSocket) -> tuple[str, int] | tuple["False", int] :
                 ok = False
                 Windows.ErrorWindow('Impossible de se connecter à l\'arbitre').show()
                 ip, port = None, None
+                sck.abort()
 
         return ip, port
 

@@ -3,6 +3,7 @@ from zlib import crc32
 import time
 import threading as th
 
+
 class FiableSocket:
     """
     Envoie un message puis attend l'ACK du message. Si le message est modifié lors de l'envoi, le destinataire ne renverra
@@ -79,6 +80,7 @@ class FiableSocket:
         - 2 caractères pour vérifier si le message est identique a un message déjà arrivé (Voir cas 3)
         - Le message
     """
+
     def __init__(self, socket):
         self.socket = socket
         self.destinataire = ('localhost', 5000)
@@ -100,7 +102,6 @@ class FiableSocket:
         self.thread_recv = th.Thread(target=self.threaded_recv)
         self.thread_recv.start()
 
-
     def __del__(self):
         debug_print("Démarrage de la destruction de l'objet FiableSocket")
         self.thread_run = False
@@ -108,13 +109,12 @@ class FiableSocket:
         debug_print("Attente de la fin du thread d'envoi")
         try:
             self.socket.sendto(b"", ('127.0.0.1', self.socket.getsockname()[1]))
-            debug_print("Envoi d'un message vide pour débloquer le thread de réception")
+            debug_print("Envoi d'un message vide pour débloquer le thread d'envoi")
         except OSError as e:
             pass
         self.thread_send.join()
         self.thread_recv.join()
         debug_print("FiableSocket détruit")
-
 
     def get_cpteur(self):
         """
@@ -152,6 +152,11 @@ class FiableSocket:
 
         debug_print("Fin du thread d'envoi")
 
+    def abort(self):
+        """
+        Permet d'arrêter l'attente d'un ACK
+        """
+        self.attente_ack = False
 
     def threaded_recv(self):
         """
@@ -167,7 +172,8 @@ class FiableSocket:
             msg = msg.decode()
 
             checksum, type_msg, cpteur, message = checksum_msg_decode(msg)
-            debug_print("Checksum : " + str(checksum) + " / Type : " + str(type_msg) + " / Cpteur : " + str(cpteur) + " / Message : " + message)
+            debug_print("Checksum : " + str(checksum) + " / Type : " + str(type_msg) + " / Cpteur : " + str(
+                cpteur) + " / Message : " + message)
 
             if type_msg == 0:
                 # Réception d'un message
@@ -185,8 +191,8 @@ class FiableSocket:
                         debug_print(f"Message envoyé sur la queue : {checksum}-{type_msg}-{message}")
 
                     # On envoie l'ACK
-                    self.socket.sendto(checksum_msg_encode(1, 99,'ACK').encode(), self.destinataire)
-                    debug_print(f"Envoi de l'ACK : {checksum_msg_encode(1, 99,'ACK')}")
+                    self.socket.sendto(checksum_msg_encode(1, 99, 'ACK').encode(), self.destinataire)
+                    debug_print(f"Envoi de l'ACK : {checksum_msg_encode(1, 99, 'ACK')}")
 
                 else:
                     debug_print(f"Message corrompu reçu : {checksum}-{type_msg}-{cpteur}-{message}")
@@ -206,8 +212,6 @@ class FiableSocket:
         debug_print("Fin du thread de réception")
 
 
-
-
 def debug_print(msg):
     """
     Utilisé pour afficher tous les messages de débug de la classe FiableSocket avec horodatage
@@ -216,6 +220,7 @@ def debug_print(msg):
     if True:
         heure = time.strftime("%H:%M:%S", time.localtime())
         print(f"[FiableSocket] - [{heure}] - {msg}")
+
 
 def checksum_msg_encode(typemsg: int, msg_cpteur: int, msg: str) -> str:
     """
@@ -241,14 +246,15 @@ def checksum_msg_encode(typemsg: int, msg_cpteur: int, msg: str) -> str:
     hex_checksum = hex(checksum)[2:].zfill(8)
     return hex_checksum + msg_concat
 
-def checksum_msg_decode(msg: str) -> tuple[int, int, int,str]:
+
+def checksum_msg_decode(msg: str) -> tuple[int, int, int, str]:
     """
     Permet d'extraire les informations d'un message fiabilisé avec la méthode checksum_msg_encode
     :param msg: La chaîne de caractère reçu dans laquelle les informations doivent être extraites
     :return: Un tuple contenant chacunes des informations (checksum, type_message, compteur, contenu_msg)
     """
     try:
-        checksum = int(msg[:8], 16) # Conversion du checksum en int à partir de l'hexa (16)
+        checksum = int(msg[:8], 16)  # Conversion du checksum en int à partir de l'hexa (16)
         typemsg = int(msg[8])
         cpteur = int(msg[9:11])
         content = msg[11:]
@@ -257,7 +263,8 @@ def checksum_msg_decode(msg: str) -> tuple[int, int, int,str]:
 
     return checksum, typemsg, cpteur, content
 
-def valider_checksum(checksum: int, typemsg: int, cpteur: int ,msg: str) -> bool:
+
+def valider_checksum(checksum: int, typemsg: int, cpteur: int, msg: str) -> bool:
     """
     Permet de valider la somme de contrôle d'un message dont les valeurs ont été extraites par la fonction
     checksum_msg_decode
