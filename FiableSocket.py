@@ -92,6 +92,7 @@ class FiableSocket:
 
         self.send_queue = mp.Queue()
         self.recv_queue = mp.Queue()
+        self.attente_traitement = mp.Queue()
 
         self.last_msg_recv: dict[tuple[str, int], str] = {}
 
@@ -167,7 +168,7 @@ class FiableSocket:
         while self.thread_run:
 
             # Récupération du message
-            msg, addr = self.socket.recvfrom(1024)
+            msg, self.destinataire = self.socket.recvfrom(1024)
             debug_print("Message reçu : " + msg.decode())
             msg = msg.decode()
 
@@ -183,11 +184,11 @@ class FiableSocket:
                 if msg_ok:
                     debug_print(f"Message valide reçu : {checksum}-{type_msg}-{message}")
                     # Vérification si le message n'a pas déjà été reçu (Cas No3)
-                    if addr not in self.last_msg_recv or self.last_msg_recv[addr] != msg:
-                        self.last_msg_recv[addr] = msg
+                    if self.destinataire not in self.last_msg_recv or self.last_msg_recv[self.destinataire] != msg:
+                        self.last_msg_recv[self.destinataire] = msg
 
                         # Envoi du message sur la partie réception
-                        self.recv_queue.put((addr, message))
+                        self.recv_queue.put((self.destinataire, message))
                         debug_print(f"Message envoyé sur la queue : {checksum}-{type_msg}-{message}")
 
                     # On envoie l'ACK
@@ -210,6 +211,13 @@ class FiableSocket:
                     debug_print(f"Réception ACK corrompu reçu : {checksum}-{type_msg}-{message}")
 
         debug_print("Fin du thread de réception")
+
+
+        def traitement_recv(self):
+            """
+            S'occupe de traiter tous les messages que le thread de réception a récupéré et a placé dans la queue
+            """
+            addr, msg = self.attente_traitement.get()
 
 
 def debug_print(msg):
