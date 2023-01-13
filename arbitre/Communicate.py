@@ -1,12 +1,13 @@
 import socket
 import Database
 import Cryptage
+from FiableSocket import FiableSocket
 
 end = False
 nom_arbitre = 'C'
 
 
-def recv(socket: socket.socket) -> None:
+def recv(socket: FiableSocket) -> None:
     """
     Fonction qui permet de recevoir en boucle les messages des clients
     :param socket: Le socket de connexion
@@ -16,8 +17,8 @@ def recv(socket: socket.socket) -> None:
     lte_fn = [process_ping, process_T1, process_classic, process_T4]
 
     while not end:
-        msg, addr = socket.recvfrom(1024)
-        msg = msg.decode()
+        addr, msg = socket.recv_queue.get()
+
         if not end:
             traite = False
             for fn in lte_fn:
@@ -32,7 +33,7 @@ def recv(socket: socket.socket) -> None:
                     print("WARN :", addr, "a envoyé un message qui n'a pas été traité / envoyé a son destinataire (" + msg + ")")
 
 
-def process_ping(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool:
+def process_ping(msg: str, addr: tuple[str, int], sck: FiableSocket) -> bool:
     """
     Permet de traiter un message de type ping (utilisé par les clients pour tester si le serveur est en ligne)
     :param msg: le message reçu
@@ -42,12 +43,12 @@ def process_ping(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool:
     """
     traite = False
     if msg.upper() == 'PING':
-        sck.sendto(b'PONG', addr)
+        sck.sendto('PONG', addr)
         traite = True
     return traite
 
 
-def process_T1(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool:
+def process_T1(msg: str, addr: tuple[str, int], sck: FiableSocket) -> bool:
     """
     S'occupe du traitement de tous les messages de type T1 (création d'une nouvelle clé)
 
@@ -78,17 +79,17 @@ def process_T1(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool:
             # Envoi de Eclef <Nom de l’arbitre,Nom utilisateur, T1>
             msg = nom_arbitre + ',' + nom_util + ',T1'
             msg = Cryptage.crypter(msg, cle)
-            sck.sendto(msg.encode(), addr)
+            sck.sendto(msg, addr)
         else:
             # Envoi de <Nom de l’arbitre, Nom utilisateur, T1>
             msg = nom_arbitre + ',' + nom_util + ',T1'
-            sck.sendto(msg.encode(), addr)
+            sck.sendto(msg, addr)
 
         traite = True
     return traite
 
 
-def process_classic(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool:
+def process_classic(msg: str, addr: tuple[str, int], sck: FiableSocket) -> bool:
     """
     Permet de vérifier qu'un message donné est bien du type T2, T3 ou T6. Si c'est le cas, lance l'exécution du message
     par le serveur
@@ -130,7 +131,7 @@ def process_classic(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool
     return traite
 
 
-def process_T4(msg: str, addr: tuple[str, int], sck: socket.socket) -> None:
+def process_T4(msg: str, addr: tuple[str, int], sck: FiableSocket) -> None:
     """
     Permet de vérifier qu'un message donné est bien du type T4. Si c'est le cas, lance l'exécution du message
     par le serveur
@@ -164,7 +165,7 @@ def process_T4(msg: str, addr: tuple[str, int], sck: socket.socket) -> None:
         index = index + 1
 
 
-def T2_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket) -> None:
+def T2_execute(msg: str, user: str, addr: tuple[str, int], sck: FiableSocket) -> None:
     """
     Fonction utilisée par process_classic et qui s'occupe de mettre à jour la clé de l'utilisateur en vérifiant
     que le message reçu soit valide
@@ -194,10 +195,10 @@ def T2_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket) -
     # (selon si la clé a été modifiée ou non)
     msg = nom_arbitre + ',' + user + ',T2'
     msg = Cryptage.crypter(msg, Database.get_key(user))
-    sck.sendto(msg.encode(), addr)
+    sck.sendto(msg, addr)
 
 
-def T3_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket) -> None:
+def T3_execute(msg: str, user: str, addr: tuple[str, int], sck: FiableSocket) -> None:
     """
     Fonction utilisée par process_classic et qui s'occupe de supprimer la clé de l'utilisateur en vérifiant
     que le message reçu soit valide
@@ -230,10 +231,10 @@ def T3_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket) -
         else:
             msg = user + ',' + nom_arbitre
         msg = Cryptage.crypter(msg, user_key)
-        sck.sendto(msg.encode(), addr)
+        sck.sendto(msg, addr)
 
 
-def T4_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket):
+def T4_execute(msg: str, user: str, addr: tuple[str, int], sck: FiableSocket):
     """
     Fonction utilisée par process_T4 et qui s'occupe d'exécuter le message T4 une fois que sa clé a été trouvée
     (Début de discussion entre 2 utilisateurs, génération de KS)
@@ -263,7 +264,7 @@ def T4_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket):
         msg_partie_b = Cryptage.crypter(msg_partie_b, user_b_key)
         msg = nom_arbitre + ',' + user + ',T4,' + ks + ',' + msg_partie_b
         msg = Cryptage.crypter(msg, user_a_key)
-        sck.sendto(msg.encode(), addr)
+        sck.sendto(msg, addr)
 
         Database.set_destinataire(user, user_b)
         Database.set_destinataire(user_b, user)
@@ -271,10 +272,10 @@ def T4_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket):
         # Envoi du message Eclef_A<Nom de l’arbitre, Nom utilisateur A, T4>
         msg = nom_arbitre + ',' + user + ',T4'
         msg = Cryptage.crypter(msg, user_a_key)
-        sck.sendto(msg.encode(), addr)
+        sck.sendto(msg, addr)
 
 
-def T6_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket) -> None:
+def T6_execute(msg: str, user: str, addr: tuple[str, int], sck: FiableSocket) -> None:
     """
     Fonction utilisée par process_classic et qui s'occupe d'envoyer à l'expéditeur du message les coordonnées
     (IP:PORT) de l'utilisateur demandé (utilisateur B)
@@ -301,10 +302,10 @@ def T6_execute(msg: str, user: str, addr: tuple[str, int], sck: socket.socket) -
             msg = user + ',T6'
         msg = Cryptage.crypter(msg, user_key)
 
-        sck.sendto(msg.encode(), addr)
+        sck.sendto(msg, addr)
 
 
-def envoi_message(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool:
+def envoi_message(msg: str, addr: tuple[str, int], sck: FiableSocket) -> bool:
     """
     Permet l'envoi d'un message de l'utilisateur A vers l'utilisateur B.
     :param msg: Le message à transférer
@@ -322,7 +323,7 @@ def envoi_message(msg: str, addr: tuple[str, int], sck: socket.socket) -> bool:
             addr_dest = Database.get_addr(nom_destinataire)
             if addr_dest is not None:
                 print(addr_dest)
-                sck.sendto(msg.encode(), addr_dest)
+                sck.sendto(msg, addr_dest)
                 envoye = True
 
     return envoye

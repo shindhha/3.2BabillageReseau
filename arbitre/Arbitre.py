@@ -3,6 +3,7 @@ import Database
 import Communicate
 import signal
 import threading as th
+from FiableSocket import FiableSocket
 
 
 listening_ip: str = ''  # '' = all interfaces
@@ -39,9 +40,9 @@ def stop_server(signum, frame):
     """
     print('Arrêt du serveur')
     Communicate.end = True
+    fs.recv_queue.put((None, 'end')) # Débloque la fonction bloquante de Queue.get()
 
-    sck = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sck.sendto(b'end', ('localhost', listening_port))  # Envoi d'un message pour débloquer recvfrom
+    fs.__del__()
 
 
 if __name__ == "__main__":
@@ -51,7 +52,8 @@ if __name__ == "__main__":
     sck = create_socket()
     if sck is not None:
         Database.init_db()
-        recvthread = th.Thread(target=Communicate.recv, args=(sck,))
+        fs = FiableSocket(sck)
+        recvthread = th.Thread(target=Communicate.recv, args=(fs,))
         recvthread.start()
 
         while not Communicate.end:
