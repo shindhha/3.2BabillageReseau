@@ -9,6 +9,9 @@ class FiableSocket:
     Envoie un message puis attend l'ACK du message. Si le message est modifié lors de l'envoi, le destinataire ne renverra
     pas d'ACK, comme si le message était perdu.
 
+    client : La personne qui envoie le message
+    serveur : La personne qui reçoit le message
+
     Si le client ne reçoit pas d'ACK, il renvoie le message.
 
     /!\ Tant que le client n'a pas reçu l'ACK, il ne peut pas passer au message suivant /!\
@@ -92,9 +95,9 @@ class FiableSocket:
 
         self.send_queue = mp.Queue()
         self.recv_queue = mp.Queue()
-        self.attente_traitement = mp.Queue()
 
         self.last_msg_recv: dict[tuple[str, int], str] = {}
+        self.last_recv_date: float = time.time()
 
         self.thread_run = True
 
@@ -104,6 +107,12 @@ class FiableSocket:
         self.thread_recv.start()
 
     def __del__(self):
+
+        # On laisse le thread actif tant que l'on n'a pas eu une pause dans les échanges de plus de 5 secondes
+        debug_print("En attente de la fin des communications")
+        while time.time() < self.last_recv_date + 5:
+            pass
+
         debug_print("Démarrage de la destruction de l'objet FiableSocket")
         self.thread_run = False
         self.attente_ack = False
@@ -137,6 +146,7 @@ class FiableSocket:
 
                 # Récupération & envoi du message
                 addr, message = self.send_queue.get()
+                self.last_recv_date = time.time()
                 self.last_msg_send = checksum_msg_encode(0, self.get_cpteur(), message)
 
                 self.destinataire = addr
@@ -211,13 +221,6 @@ class FiableSocket:
                     debug_print(f"Réception ACK corrompu reçu : {checksum}-{type_msg}-{message}")
 
         debug_print("Fin du thread de réception")
-
-
-        def traitement_recv(self):
-            """
-            S'occupe de traiter tous les messages que le thread de réception a récupéré et a placé dans la queue
-            """
-            addr, msg = self.attente_traitement.get()
 
 
 def debug_print(msg):
