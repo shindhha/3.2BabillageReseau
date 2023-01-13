@@ -69,7 +69,7 @@ def bind_get_pos(window: sg.Window) -> None:
     window.TKroot.event_generate("<Configure>", x=window.TKroot.winfo_x(), y=window.TKroot.winfo_y())
 
 
-class SimpleInputWindow():
+class SimpleInputWindow:
     """
     SimpleInputWindow - Fenêtre préconfigurée pour demander une entrée à l'utilisateur
     """
@@ -95,6 +95,7 @@ class SimpleInputWindow():
         self.window.TKroot.after(500, bind_get_pos, self.window)
 
         event, values = self.window.read()
+        entree = None
 
         if event == 'btn_annuler' or event == sg.WIN_CLOSED:
             entree = None
@@ -105,6 +106,50 @@ class SimpleInputWindow():
         self.window.close()
         return entree
 
+
+class IpPortInput:
+    """
+    IpPortInput - Fenêtre préconfigurée pour demander la saisie d'une ip et d'un port à l'utilisateur
+    """
+
+    def __init__(self, title, text, default_port: int):
+        """
+        :param title: Le titre de la fenêtre
+        :param text: Le texte à afficher devant la case de saisie
+        :param hide: Si True, la saisie sera masquée avec des étoiles
+        """
+        self.layout = [
+            [sg.Text(text)],
+            [sg.InputText(key='input-ip', size=(20, 1)), sg.InputText(key='input-port', size=(5, 1), default_text=str(default_port))],
+            [sg.Button('Quitter', key='btn_exit'), sg.Push(), sg.Button('Valider', key='btn_valider')]
+        ]
+        self.window = sg.Window(title, self.layout, finalize=True, scaling=scaling)
+        set_location(self.window)
+
+        # Bind de la touche Entrée
+        self.window.bind('<Return>', 'btn_valider')
+
+    def show(self):
+        self.window.TKroot.after(500, bind_get_pos, self.window)
+
+        event, values = self.window.read()
+        entree = None
+
+        if event == 'btn_exit' or event == sg.WIN_CLOSED:
+            entree = None
+
+        elif event == 'btn_valider':
+            ip = self.window['input-ip'].get()
+            port = self.window['input-port'].get()
+
+            try:
+                entree = (ip, int(port))
+            except ValueError:
+                entree = (None, None)
+                print("WARN : La saisie du port est incorrecte")
+
+        self.window.close()
+        return entree
 
 class ErrorWindow:
     """

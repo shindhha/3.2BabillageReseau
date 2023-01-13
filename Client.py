@@ -259,44 +259,40 @@ def ask_ip(sck: FiableSocket) -> tuple[str, int] | tuple["False", int] :
     tentative = 0
     ip = "False"
     port = 5000
-    while not ipRgx.match(ip):
-        ipport = Windows.SimpleInputWindow('Saisie des coordonnées',
-                                           'Entrez l\'ip et le port de l\'arbitre \n(IP:PORT, port facultatif)').show()
+
+    fin_while = False
+    addr_ok = False
+
+
+    while not fin_while:
+        ipport = Windows.IpPortInput('Saisie des coordonnées',
+                                           'Entrez l\'ip et le port de l\'arbitre', 5000).show()
+
         if ipport is not None:
-            if ipport.find(':') != -1:
-                ip, port = ipport.split(':')
-                try:
-                    port = int(port)
-                    ok = True
-                except ValueError:
-                    tentative += 1
-                    ok = False
+            ip = ipport[0]
+            port = ipport[1]
+            if ip is not None and port is not None and ipRgx.match(ip):
+                addr_ok = True
+                fin_while = True
             else:
-                ip = ipport
-                port = 5000
-                ok = True
+                tentative += 1
 
-        # Test si trop de tentatives effectuée
-        if tentative == 5:
+        if tentative == 5 or ipport is None:
+            fin_while = True
             ip = "False"
-            Windows.ErrorWindow('Trop de tentatives effectuées').show()
-            return ip, port
-        elif ipport is None:
-            ip = "False"
-            return ip, port
+            port = 0
+            Windows.ErrorWindow("Vous avez effectué trop de tentatives !").show()
 
-        tentative += 1
 
-    if ipport is not None:
-        if ok:
-            try:
-                sck.sendto('PING', (ip, port))
-                sck.recv_queue.get(timeout=4)
-            except queue.Empty:
-                ok = False
-                Windows.ErrorWindow('Impossible de se connecter à l\'arbitre').show()
-                ip, port = None, None
-                sck.abort()
+    if addr_ok:
+        try:
+            sck.sendto('PING', (ip, port))
+            sck.recv_queue.get(timeout=4)
+        except queue.Empty:
+            ok = False
+            Windows.ErrorWindow('Impossible de se connecter à l\'arbitre').show()
+            ip, port = None, None
+            sck.abort()
 
         return ip, port
 
@@ -308,12 +304,12 @@ if __name__ == '__main__':
 
     fs = FiableSocket(Utils.creer_socket())
 
-    while ip is None:
-        ip, port = ask_ip(fs)
-        # Test si trop d'erreur
-        if ip == "False":
+    ipport = (None, None)
+
+    while ipport is not None:
+        ipport = ask_ip(fs)
+        if ipport is None or ipport == (None, None):
             ipCorrect = False
-            break
 
     if ipCorrect:
         username = connexion()
