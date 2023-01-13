@@ -91,9 +91,9 @@ def creation_cle(update=False):
 
         # Affichage de la fenêtre de saisie de la clé
         if update:
-            fenetre = Windows.SimpleInputWindow('Modifier votre clé', 'Entrez votre nouvelle clé :')
+            fenetre = Windows.SimpleInputWindow('Modifier votre clé', 'Entrez votre nouvelle clé :', hide=True)
         else:
-            fenetre = Windows.SimpleInputWindow('Créer votre clé', 'Entrez votre clé :')
+            fenetre = Windows.SimpleInputWindow('Créer votre clé', 'Entrez votre clé :', hide=True)
         cle = fenetre.show()
 
         if cle is None:  # Si l'utilisateur a cliqué sur Annuler

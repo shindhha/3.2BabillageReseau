@@ -74,14 +74,15 @@ class SimpleInputWindow():
     SimpleInputWindow - Fenêtre préconfigurée pour demander une entrée à l'utilisateur
     """
 
-    def __init__(self, title, text):
+    def __init__(self, title, text, hide=False):
         """
         :param title: Le titre de la fenêtre
         :param text: Le texte à afficher devant la case de saisie
+        :param hide: Si True, la saisie sera masquée avec des étoiles
         """
         self.layout = [
             [sg.Text(text)],
-            [sg.InputText(key='input', size=(20, 1))],
+            [sg.InputText(key='input', size=(20, 1), password_char='*' if hide else None)],
             [sg.Button('Annuler', key='btn_annuler'), sg.Push(), sg.Button('Valider', key='btn_valider')]
         ]
         self.window = sg.Window(title, self.layout, finalize=True, scaling=scaling)
