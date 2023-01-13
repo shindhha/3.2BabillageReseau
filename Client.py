@@ -267,7 +267,6 @@ def ask_ip(sck: FiableSocket) -> tuple[str, int] | tuple["False", int] :
     while not fin_while:
         ipport = Windows.IpPortInput('Saisie des coordonnées',
                                            'Entrez l\'ip et le port de l\'arbitre', 5000).show()
-
         if ipport is not None:
             ip = ipport[0]
             port = ipport[1]
@@ -281,7 +280,9 @@ def ask_ip(sck: FiableSocket) -> tuple[str, int] | tuple["False", int] :
             fin_while = True
             ip = "False"
             port = 0
-            Windows.ErrorWindow("Vous avez effectué trop de tentatives !").show()
+            if tentative == 5:
+
+                Windows.ErrorWindow("Vous avez effectué trop de tentatives !").show()
 
 
     if addr_ok:
