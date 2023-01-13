@@ -259,44 +259,38 @@ def ask_ip(sck: FiableSocket) -> tuple[str, int] | tuple["False", int] :
     tentative = 0
     ip = "False"
     port = 5000
-    while not ipRgx.match(ip):
-        ipport = Windows.SimpleInputWindow('Saisie des coordonnées',
-                                           'Entrez l\'ip et le port de l\'arbitre \n(IP:PORT, port facultatif)').show()
+
+    fin_while = False
+    addr_ok = False
+
+
+    while not fin_while:
+        ipport = Windows.IpPortInput('Saisie des coordonnées',
+                                           'Entrez l\'ip et le port de l\'arbitre', 5000).show()
         if ipport is not None:
-            if ipport.find(':') != -1:
-                ip, port = ipport.split(':')
-                try:
-                    port = int(port)
-                    ok = True
-                except ValueError:
-                    tentative += 1
-                    ok = False
-            else:
-                ip = ipport
-                port = 5000
-                ok = True
+            ip = ipport[0]
+            port = ipport[1]
+            if ipRgx.match(ip):
+                addr_ok = True
+                fin_while = True
+        else:
+            tentative += 1
 
-        # Test si trop de tentatives effectuée
         if tentative == 5:
+            fin_while = True
             ip = "False"
-            Windows.ErrorWindow('Trop de tentatives effectuées').show()
-            return ip, port
-        elif ipport is None:
-            ip = "False"
-            return ip, port
+            port = 0
 
-        tentative += 1
 
-    if ipport is not None:
-        if ok:
-            try:
-                sck.sendto('PING', (ip, port))
-                sck.recv_queue.get(timeout=4)
-            except queue.Empty:
-                ok = False
-                Windows.ErrorWindow('Impossible de se connecter à l\'arbitre').show()
-                ip, port = None, None
-                sck.abort()
+    if addr_ok:
+        try:
+            sck.sendto('PING', (ip, port))
+            sck.recv_queue.get(timeout=4)
+        except queue.Empty:
+            ok = False
+            Windows.ErrorWindow('Impossible de se connecter à l\'arbitre').show()
+            ip, port = None, None
+            sck.abort()
 
         return ip, port
 
