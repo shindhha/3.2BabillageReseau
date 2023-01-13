@@ -1,18 +1,20 @@
+import queue
+
 import Windows
 import Utils
 import Communicate
 from Cryptage import cleOk
 import threading as th
 from SimpleReceiver import SimpleReceiver
+from FiableSocket import FiableSocket
 import socket
 import re
 
 
 class Utilisateur:
-    def __init__(self):
-        self.socket = Utils.creer_socket()
-        self._receiver = SimpleReceiver(self.socket)
-        self._process_msg = th.Thread(target=Communicate.process_msg, args=(self._receiver.queue_recv, self))
+    def __init__(self, fiable_socket: FiableSocket):
+        self.fiable_socket: FiableSocket = fiable_socket
+        self._process_msg = th.Thread(target=Communicate.process_msg, args=(self.fiable_socket.recv_queue, self))
         self._process_msg.start()
 
         # --- Informations relatives à l'utilisateur ---
@@ -27,7 +29,6 @@ class Utilisateur:
         # --- Informations relatives à la communication avec un tiers ---
         self.nom_destinataire = None
         self.ks = None
-        self.addr_destinataire = None
 
         # --- Informations relatives au menu principal ---
         self.main_menu = None
@@ -38,8 +39,9 @@ class Utilisateur:
         self.msg_attente = []
 
     def __del__(self):
-        self._receiver.terminate()
-        self.socket.close()
+        self.fiable_socket.recv_queue.put((None, 'end'))
+        self.fiable_socket.__del__()
+
 
 
 # ------------------ Main ------------------
@@ -245,7 +247,7 @@ def actions():
             print('Action inconnue')
 
 
-def ask_ip() -> tuple[str, int] | tuple["False", int] :
+def ask_ip(sck: FiableSocket) -> tuple[str, int] | tuple["False", int] :
     """
     Permet de demander l'ip et le port de l'arbitre et de tester le bind de la socket au serveur
     :return: Si IP et PORT correctent alors on renvoie un tuple avec l'ip et le port
@@ -287,13 +289,10 @@ def ask_ip() -> tuple[str, int] | tuple["False", int] :
 
     if ipport is not None:
         if ok:
-            sck = Utils.creer_socket()
-            sck.settimeout(5)
             try:
-                sck.sendto(b'PING', (ip, port))
-                sck.recvfrom(1024)
-                sck.close()
-            except socket.timeout:
+                sck.sendto('PING', (ip, port))
+                sck.recv_queue.get(timeout=4)
+            except queue.Empty:
                 ok = False
                 Windows.ErrorWindow('Impossible de se connecter à l\'arbitre').show()
                 ip, port = None, None
@@ -306,8 +305,10 @@ if __name__ == '__main__':
     ip, port = None, None
     ipCorrect = True
 
+    fs = FiableSocket(Utils.creer_socket())
+
     while ip is None:
-        ip, port = ask_ip()
+        ip, port = ask_ip(fs)
         # Test si trop d'erreur
         if ip == "False":
             ipCorrect = False
@@ -315,7 +316,7 @@ if __name__ == '__main__':
 
     if ipCorrect:
         username = connexion()
-        utilisateur = Utilisateur()
+        utilisateur = Utilisateur(fs)
 
         if username is not None:
             utilisateur.nom = username
@@ -323,3 +324,7 @@ if __name__ == '__main__':
             actions()
 
         utilisateur.__del__()
+
+    else:
+        print('Fin du programme')
+        fs.__del__()

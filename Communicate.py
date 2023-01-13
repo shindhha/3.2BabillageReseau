@@ -1,7 +1,7 @@
 import Cryptage
 from multiprocessing import Queue
 
-status_list = ["idle", "createKey", "editKey", "deleteKey", "initDialog", "getCoord", "waitAccept", "discuss"]
+status_list = ["idle", "createKey", "editKey", "deleteKey", "initDialog", "waitAccept", "discuss"]
 status = "idle"
 
 retour_infos = Queue()
@@ -35,16 +35,14 @@ def process_msg(queue, client):
 
     end = False
     while not end:
-        msg = queue.get()
-        emetteur = queue.get()
+        addr, msg = queue.get()
 
         print('Message reçu : ' + msg)
         print('status : ' + status)
 
 
         if msg != 'end':
-            process_errors(msg)
-            msg_traite = process_demande_dialog(msg, client, emetteur)
+            msg_traite = process_demande_dialog(msg, client)
 
             if status == 'createKey':
                 msg_traite |= process_create_key(msg, client.temp_cle)
@@ -58,26 +56,17 @@ def process_msg(queue, client):
             elif status == 'initDialog':
                 msg_traite |= process_init_dialog(msg, client)
 
-            elif status == 'getCoord':
-                msg_traite |= process_get_coord(msg, client)
-
             elif status == 'waitAccept':
                 process_accept_refuse_dialog(msg, client)
 
             elif status == 'discuss':
                 process_discuss(msg, client)
 
-            else:
-                print('WARN : Un message reçu par ' + str(emetteur) + ' n\'a pas été traité (' + msg + ')')
-
             # On log les messages si on est pas encore dans la fenêtre de discussion mais qu'un échange a voulu être
             # démarré par un autre utilisateur
             if not msg_traite and status != status_list[-1] and client.ks is not None:
                 msg_decrypt = Cryptage.decrypter(msg, client.ks)
                 client.msg_attente.append(msg_decrypt)
-                print("JAI LE MESSAGE")
-
-            print("DEBUGGGGGGGG", str(msg_traite), status, client.ks)
 
         else:
             end = True
@@ -85,20 +74,6 @@ def process_msg(queue, client):
 
 
 # -------- Fonctions de process des messages reçus par le serveur --------
-
-
-def process_errors(msg):
-    """
-    Fonction qui traite les erreurs reçues par le serveur
-    :param msg: Le message d'erreur
-    :param server: Le serveur qui a envoyé le message
-    :return: None
-    """
-    msg_split = msg.split(',')
-    if msg_split[-1] == 'T0':
-        print('Erreur: ' + msg)
-
-
 def process_create_key(msg, cle):
     """
     Traite les messages reçus par le serveur à propos de la création de la première clé et place les informations dans
@@ -199,38 +174,6 @@ def process_delete_key(msg, cle):
     return traite
 
 
-def process_get_coord(msg, client):
-    """
-    Traite les messages reçus par le serveur à propos de la demande de coordonnées et place les informations dans
-    l'objet client (IP:PORT). Envoie True dans la file retour_infos si les coordonnées ont été reçues, False sinon.
-
-    INFO :
-        Format du message de succès : Eclef<Nom utilisateur B, IP, PORT, T6>,
-        Format du message d’échec : Eclef<Nom utilisateur A, T6>
-
-    :param msg: Le message à traiter
-    :param client: l'objet de type client
-    :return: true si le message a été traité, false sinon
-    """
-    msg_traite = False
-    cle = client.cle
-
-    msg_decrypt = Cryptage.decrypter(msg, cle)
-    msg_split = msg_decrypt.split(',')
-
-    if len(msg_split) == 2 and msg_split[-1] == 'T6':
-        retour_infos.put(False)
-        msg_traite = True
-    elif len(msg_split) == 4 and msg_split[-1] == 'T6':
-        ip = msg_split[1]
-        port = msg_split[2]
-        client.addr_destinataire = (ip, int(port))
-        retour_infos.put(True)
-        msg_traite = True
-
-    return msg_traite
-
-
 def process_init_dialog(msg, client):
     """
     Traite les messages reçus par le serveur durant la phase d'initialisation du dialogue et s'occupe de l'envoi de ks à B
@@ -265,7 +208,7 @@ def process_init_dialog(msg, client):
         partie_a_envoyer = decrypt_msg[position_fin_ks:]
 
         set_status('waitAccept')
-        client.socket.sendto(partie_a_envoyer.encode(), client.addr_arbitre)
+        client.fiable_socket.sendto(partie_a_envoyer, client.addr_arbitre)
 
         retour_infos.put(True)
         traite = True
@@ -273,7 +216,7 @@ def process_init_dialog(msg, client):
     return traite
         
         
-def process_demande_dialog(msg, client, emetteur):
+def process_demande_dialog(msg, client):
     """
     Traite le message de demande de communication émis par l'utilisateur A vers B (nous)
     (C'est la 2° partie du message T4 que reçoit A par le serveur)
@@ -302,7 +245,6 @@ def process_demande_dialog(msg, client, emetteur):
 
         if len(msg_split) == 4:
             if msg_split[2] == nom_client and msg_split[0] == nom_arbitre:
-                client.addr_destinataire = emetteur
                 client.nom_destinataire = msg_split[1]
                 client.ks = msg_split[3]
                 client.demande_connexion = True
@@ -376,7 +318,7 @@ def create_key(client):
     cle = client.temp_cle
 
     msg = nom_utilisateur + ',' + nom_arbitre + ',T1,' + cle
-    client.socket.sendto(msg.encode(), client.addr_arbitre)
+    client.fiable_socket.sendto(msg, client.addr_arbitre)
 
     return retour_infos.get()
 
@@ -401,7 +343,7 @@ def edit_key(client):
     msg_crypt = Cryptage.crypter(msg_crypt, cle_old)
 
     msg = nom_utilisateur + ',' + nom_arbitre + ',' + msg_crypt
-    client.socket.sendto(msg.encode(), client.addr_arbitre)
+    client.fiable_socket.sendto(msg, client.addr_arbitre)
 
     return retour_infos.get()
 
@@ -424,7 +366,7 @@ def delete_key(client):
     msg_crypt = Cryptage.crypter(msg_crypt, cle)
 
     msg = nom_utilisateur + ',' + nom_arbitre + ',' + msg_crypt
-    client.socket.sendto(msg.encode(), client.addr_arbitre)
+    client.fiable_socket.sendto(msg, client.addr_arbitre)
 
     return retour_infos.get()
 
@@ -446,32 +388,7 @@ def demander_ks(client):
 
     msg_crypt = nom_utilisateur + ',' + nom_arbitre + ',' + nom_destinataire + ',T4'
     msg_crypt = Cryptage.crypter(msg_crypt, cle)
-    client.socket.sendto(msg_crypt.encode(), client.addr_arbitre)
-
-    return retour_infos.get()
-
-
-def demander_coordonnees(client):  # TODO : a supprimer
-    """
-    Permet d'envoyer au serveur le message de demande de coordonnées d'un autre client.
-
-    INFO :
-        Format du msg envoyé : <Nom utilisateur, Nom de l’arbitre, Eclef<T6, utilisateur B>>.
-
-    :return: True si les coordonnées de l'utilisateur ont été reçues, False sinon
-    """
-    set_status('getCoord')
-
-    nom_utilisateur = client.nom
-    nom_arbitre = client.nom_arbitre
-    cle = client.cle
-    nom_destinataire = client.nom_destinataire
-
-    msg_crypt = "T6," + nom_destinataire
-    msg_crypt = Cryptage.crypter(msg_crypt, cle)
-
-    msg = nom_utilisateur + ',' + nom_arbitre + ',' + msg_crypt
-    client.socket.sendto(msg.encode(), client.addr_arbitre)
+    client.fiable_socket.sendto(msg_crypt, client.addr_arbitre)
 
     return retour_infos.get()
 
@@ -501,7 +418,7 @@ def accepter_refuser_dialogue(client, accepter):
         msg_crypt = 'T5,' + msg_base
 
     msg_crypt = Cryptage.crypter(msg_crypt, ks)
-    client.socket.sendto(msg_crypt.encode(), client.addr_arbitre)
+    client.fiable_socket.sendto(msg_crypt, client.addr_arbitre)
 
 
 def envoyer_message(client, message):
@@ -515,4 +432,4 @@ def envoyer_message(client, message):
 
     msg_crypt = Cryptage.crypter(message, cle)
 
-    client.socket.sendto(msg_crypt.encode(), client.addr_arbitre)
+    client.fiable_socket.sendto(msg_crypt, client.addr_arbitre)
