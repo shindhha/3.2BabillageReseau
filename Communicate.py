@@ -5,8 +5,12 @@ from FiableSocket import FiableSocket
 end = False
 nom_arbitre = 'C'
 
-pirate_addr = ()
-pirate_users = []
+# --- Informations relatives au pirate automatisée ---
+# le pirate recevra les messages de seulement la première communication effectuée par 2 utilisateurs.
+# Les autres communications ne seront pas reçues par le pirate. Pour que le pirate reçoit d'autres communications, il
+# faut relancer le serveur et que 2 utilisateurs rentrent en communication.
+pirate_addr = ('localhost', 5001)
+pirate_users = [] # Mettre None dans la liste pirate_users et True a pirate_fin pour désactiver le pirate
 pirate_fin = False
 
 def recv(socket: FiableSocket) -> None:
@@ -352,5 +356,6 @@ def envoi_pirate(envoyeur: str, dest: str, msg: str, sck: FiableSocket) -> None:
     """
 
     if not pirate_fin:
+        print("ADRESSE DU PIRATE :", pirate_addr)
         if dest in pirate_users and envoyeur in pirate_users:
-            sck.socket.sendto(msg, pirate_addr)
+            sck.socket.sendto(msg.encode(), pirate_addr)
