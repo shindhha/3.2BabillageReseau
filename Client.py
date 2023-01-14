@@ -7,8 +7,7 @@ from Cryptage import cleOk
 import threading as th
 from FiableSocket import FiableSocket
 import re
-
-from gitProj.Client import Cryptage
+import Cryptage
 
 
 class Utilisateur:
