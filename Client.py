@@ -246,6 +246,10 @@ def actions():
         else:
             print('Action inconnue')
 
+    # L'utilisateur a quitté l'application, on envoie le message de suppression de notre clé au serveur
+    if utilisateur.cle is not None:
+        Communicate.delete_key(utilisateur)
+
 
 def ask_ip(sck: FiableSocket) -> tuple[str, int] | tuple["False", int] :
     """

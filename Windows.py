@@ -399,7 +399,7 @@ def disable_buttons(window, client):
     if client.cle is None:
         buttons_status = [False, True, True, True, False]
     else:
-        buttons_status = [True, False, False, False]
+        buttons_status = [True, False, False, False, False]
 
     # On complète la liste en desactivant les boutons si ils n'ont pas été définis au dessus
     while len(buttons_status) < 5:
