@@ -171,7 +171,7 @@ def get_addr(nom: str) -> tuple[str, int] | None:
     return addr
 
 
-def set_destinataire(nom: str, destinataire: str) -> bool:
+def set_destinataire(nom: str, destinataire: str | None) -> bool:
     """
     Permet de définir le destinataire de la communication pour un échange de messages
     :param nom: L'utilisateur à définir
@@ -205,8 +205,10 @@ def get_destinataire(utilisateur: str) -> str | None:
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
 
-    c.execute("SELECT destinataire FROM clefs WHERE nom = (?)", utilisateur)
-    nom_destinataire = c.fetchone()[0]
+    c.execute("SELECT destinataire FROM clefs WHERE nom = (?)", (utilisateur,))
+    nom_destinataire = c.fetchone()
+    if nom_destinataire is not None:
+        nom_destinataire = nom_destinataire[0]
 
     conn.close()
 
@@ -251,7 +253,7 @@ def get_username(addr: tuple[str, int]) -> str | None:
 
     nom_util = None
     if len(all_rows) > 0:
-        nom_util = all_rows[0]
+        nom_util = all_rows[0][0]
 
     conn.close()
 

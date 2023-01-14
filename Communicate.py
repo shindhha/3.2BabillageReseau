@@ -14,7 +14,7 @@ def recv(socket: FiableSocket) -> None:
     :return: Le message reçu
     """
 
-    lte_fn = [process_ping, process_T1, process_classic, process_T4]
+    lte_fn = [process_ping, process_T1, process_classic, process_T4_T5]
 
     while not end:
         addr, msg = socket.recv_queue.get()
@@ -24,7 +24,6 @@ def recv(socket: FiableSocket) -> None:
             for fn in lte_fn:
                 if fn(msg, addr, socket):
                     traite = True
-                    Database.desactiver_communication(addr)
                     break
             if not traite:
                 if envoi_message(msg, addr, socket):
@@ -96,7 +95,6 @@ def process_classic(msg: str, addr: tuple[str, int], sck: FiableSocket) -> bool:
 
     Message reçu : - <Nom utilisateur, Nom de l’arbitre, Eold<T2, old clef privée de l’utilisateur, new clef privée>>
                    - <Nom utilisateur, Nom de l’arbitre, Eclef<T3,clef privée>>
-                   - <Nom utilisateur, Nom de l’arbitre, Eclef<T6, utilisateur B>>
 
     :param msg: Le message reçu
     :param addr: L'adresse du client
@@ -124,24 +122,22 @@ def process_classic(msg: str, addr: tuple[str, int], sck: FiableSocket) -> bool:
                 print('Traitement du message T3 de ' + nom_utilisateur + ' (' + msg + ')')
                 T3_execute(dechiffre, nom_utilisateur, addr, sck)
                 traite |= True
-            elif dechiffre[:2] == 'T6':
-                print('Traitement du message T6 de ' + nom_utilisateur + ' (' + msg + ')')
-                T6_execute(dechiffre, nom_utilisateur, addr, sck)
-                traite |= True
     return traite
 
 
-def process_T4(msg: str, addr: tuple[str, int], sck: FiableSocket) -> None:
+def process_T4_T5(msg: str, addr: tuple[str, int], sck: FiableSocket) -> bool:
     """
     Permet de vérifier qu'un message donné est bien du type T4. Si c'est le cas, lance l'exécution du message
     par le serveur
 
-    Message reçu : Eclef< Nom de l’utilisateur A, Nom de l’arbitre, Nom de l’utilisateur B, T4>.
+    Message reçu : - Eclef< Nom de l’utilisateur A, Nom de l’arbitre, Nom de l’utilisateur B, T4>.
+                   - Eclef<Nom utilisateur, T5>.
+
 
     :param msg: Le message reçu
     :param addr: L'adresse du client
     :param sck: Le socket à utiliser pour l'envoi
-    :return: None
+    :return: true si le message a été traité, false sinon
     """
 
     keys = Database.get_all_keys()
@@ -162,7 +158,19 @@ def process_T4(msg: str, addr: tuple[str, int], sck: FiableSocket) -> None:
                     T4_execute(msg_dechiffre, util_a, addr, sck)
                 else:
                     print("WARN : " + util_a + " a envoyé un message T4 qui a été déchiffré avec une autre clé que la sienne")
+
+        elif msg_dechiffre[-2:] == 'T5':
+            msg_split = msg_dechiffre.split(',')
+            if len(msg_split) == 2:
+                util = msg_split[0]
+                if key == Database.get_key(util):
+                    cle_trouve = True
+                    print('Traitement du message T5 de ' + util + ' (' + msg + ')')
+                    T5_execute(msg_dechiffre, util, addr)
+                else:
+                    print("WARN : " + util + " a envoyé un message T5 qui a été déchiffré avec une autre clé que la sienne")
         index = index + 1
+    return cle_trouve
 
 
 def T2_execute(msg: str, user: str, addr: tuple[str, int], sck: FiableSocket) -> None:
@@ -236,11 +244,12 @@ def T3_execute(msg: str, user: str, addr: tuple[str, int], sck: FiableSocket) ->
 
 def T4_execute(msg: str, user: str, addr: tuple[str, int], sck: FiableSocket):
     """
-    Fonction utilisée par process_T4 et qui s'occupe d'exécuter le message T4 une fois que sa clé a été trouvée
+    Fonction utilisée par process_T4_T5 et qui s'occupe d'exécuter le message T4 une fois que sa clé a été trouvée
     (Début de discussion entre 2 utilisateurs, génération de KS)
 
     Envoi Eclef_A<Nom de l’arbitre, Nom utilisateur A, T4, Ks, Eclef_B<Nom de l’arbitre, Nom utilisateur A, Nom utilisateur B, Ks>>
-    si l'utilisateur B a été trouvé, sinon envoi de Eclef_A<Nom de l’arbitre, Nom utilisateur A, T4>
+    si l'utilisateur B a été trouvé, sinon envoi de Eclef_A<Nom de l’arbitre, Nom utilisateur A, T4> si l'utilisateur B
+    n'a pas été trouvé ou s'il est déjà en ligne avec une autre personne
 
     :param msg: La partie du message du protocole T4 qui contient les informations à traiter
                 (Eclef< Nom de l’utilisateur A, Nom de l’arbitre, Nom de l’utilisateur B, T4>.)
@@ -255,7 +264,9 @@ def T4_execute(msg: str, user: str, addr: tuple[str, int], sck: FiableSocket):
     user_a_key = Database.get_key(user)
     user_b_key = Database.get_key(user_b)
 
-    if user_a_key is not None and user_b_key is not None:
+    user_b_dispo = Database.get_destinataire(user_b) is None
+
+    if user_a_key is not None and user_b_key is not None and user_b_dispo:
         # génération de la clé de session
         ks = Cryptage.clefSession(user_a_key, user_b_key)
 
@@ -275,35 +286,21 @@ def T4_execute(msg: str, user: str, addr: tuple[str, int], sck: FiableSocket):
         sck.sendto(msg, addr)
 
 
-def T6_execute(msg: str, user: str, addr: tuple[str, int], sck: FiableSocket) -> None:
+def T5_execute(msg: str, user: str, addr: tuple[str, int]):
     """
-    Fonction utilisée par process_classic et qui s'occupe d'envoyer à l'expéditeur du message les coordonnées
-    (IP:PORT) de l'utilisateur demandé (utilisateur B)
-
-    Envoi Eclef<Nom utilisateur B, IP, PORT, T6>, si l'utilisateur demandé a été trouvé, sinon envoi de
-    Eclef<Nom utilisateur A, T6> si l'utilisateur demandé n'a pas été trouvé
-
-    :param msg: La partie du message du protocole T3 qui contient les informations à traiter
-                (Eclef<T6, utilisateur B>)
-    :param user: L'utilisateur qui a envoyé ce message
-    :param addr: L'adresse du client
-    :param sck: Le socket à utiliser pour l'envoi
+    Fonction utilisée par process_T4_T5 et qui s'occupe d'exécuter le message T5 une fois que sa clé a été trouvée
+    (Débind du destinataire de l'utilisateur qui a envoyé ce message)
+    :param msg: Le message de débind émis par l'utilisateur
+    :param user: Le nom de l'utilisateur
+    :param addr: L'adresse Ip + port du client
     :return: None
     """
-    user_key = Database.get_key(user)
-    msg_decode = msg.split(',')
 
-    if len(msg_decode) == 2 and user_key is not None:
-        util_b = msg_decode[1]
-        util_b_addr = Database.get_addr(util_b)
-        if util_b_addr is not None:
-            msg = util_b + ',' + util_b_addr[0] + ',' + str(util_b_addr[1]) + ',T6'
-        else:
-            msg = user + ',T6'
-        msg = Cryptage.crypter(msg, user_key)
-
-        sck.sendto(msg, addr)
-
+    user_conn = Database.get_username(addr)
+    if user_conn is not None:
+        if user == user_conn:
+            Database.set_destinataire(user, None)
+            print('Le destinataire de ' + user + ' a été supprimé !')
 
 def envoi_message(msg: str, addr: tuple[str, int], sck: FiableSocket) -> bool:
     """
@@ -320,11 +317,12 @@ def envoi_message(msg: str, addr: tuple[str, int], sck: FiableSocket) -> bool:
     if nom_util is not None:
         nom_destinataire = Database.get_destinataire(nom_util)
         if nom_destinataire is not None:
-            addr_dest = Database.get_addr(nom_destinataire)
-            if addr_dest is not None:
-                print(addr_dest)
-                sck.sendto(msg, addr_dest)
-                envoye = True
+            if Database.get_destinataire(nom_destinataire) == nom_util:
+                addr_dest = Database.get_addr(nom_destinataire)
+                if addr_dest is not None:
+                    print(addr_dest)
+                    sck.sendto(msg, addr_dest)
+                    envoye = True
 
     return envoye
 
