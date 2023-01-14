@@ -142,7 +142,7 @@ def demarrer_communication_initialisateur():
     # Demande du nom du destinataire
     fenetre = Windows.SimpleInputWindow('Communiquer', 'Entrez le nom du destinataire :')
     nom_destinataire = fenetre.show()
-    if nom_destinataire is not None and len(nom_destinataire) > 0:
+    if nom_destinataire is not None and len(nom_destinataire) > 0 and nom_destinataire != utilisateur.nom:
         utilisateur.nom_destinataire = nom_destinataire
     else:
         erreur = 'Nom du destinataire invalide'
