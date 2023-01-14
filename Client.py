@@ -260,43 +260,47 @@ def ask_ip(sck: FiableSocket) -> tuple[str, int] | tuple["False", int] :
     ip = "False"
     port = 5000
 
-    fin_while = False
+    boucle = True
     addr_ok = False
 
 
-    while not fin_while:
+    while boucle:
         ipport = Windows.IpPortInput('Saisie des coordonnées',
                                            'Entrez l\'ip et le port de l\'arbitre', 5000).show()
+
+        # Vérification de l'ip et du port
         if ipport is not None:
             ip = ipport[0]
             port = ipport[1]
-            if ip is not None and port is not None and ipRgx.match(ip):
+            if ip is not None and port is not None and ipRgx.match(ip) and 0 < port < 65536:
                 addr_ok = True
-                fin_while = True
             else:
-                tentative += 1
+                addr_ok = False
 
+
+        # On teste la connectivité au serveur
+        if addr_ok:
+            try:
+                sck.sendto('PING', (ip, port))
+                sck.recv_queue.get(timeout=4)
+                boucle = False
+            except queue.Empty:
+                sck.abort()
+                boucle = True
+                Windows.ErrorWindow('Impossible de se connecter à l\'arbitre').show()
+                ip, port = None, None
+
+        # On ferme le programme s'il y a eu trop d'essais
         if tentative == 5 or ipport is None:
-            fin_while = True
+            boucle = False
             ip = "False"
             port = 0
             if tentative == 5:
-
                 Windows.ErrorWindow("Vous avez effectué trop de tentatives !").show()
 
+        tentative += 1
 
-    if addr_ok:
-        try:
-            sck.sendto('PING', (ip, port))
-            sck.recv_queue.get(timeout=4)
-        except queue.Empty:
-            ok = False
-            Windows.ErrorWindow('Impossible de se connecter à l\'arbitre').show()
-            ip, port = None, None
-            sck.abort()
-
-        return ip, port
-
+    return ip, port
 
 if __name__ == '__main__':
 
@@ -305,12 +309,10 @@ if __name__ == '__main__':
 
     fs = FiableSocket(Utils.creer_socket())
 
-    ipport = (None, None)
 
-    while ipport is not None:
-        ipport = ask_ip(fs)
-        if ipport is None or ipport == (None, None):
-            ipCorrect = False
+    ipport = ask_ip(fs)
+    if ipport == ("False", 0):
+        ipCorrect = False
 
     if ipCorrect:
         username = connexion()
@@ -318,7 +320,7 @@ if __name__ == '__main__':
 
         if username is not None:
             utilisateur.nom = username
-            utilisateur.addr_arbitre = (ip, port)
+            utilisateur.addr_arbitre = (ipport[0], ipport[1])
             actions()
 
         utilisateur.__del__()
