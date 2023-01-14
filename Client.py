@@ -163,6 +163,7 @@ def demarrer_communication_initialisateur():
         if Communicate.demander_ks(utilisateur):
             # L'arbitre a accepté la demande, on affiche la fenêtre de communication pendant que l'utilisateur B
             # accepte la demande
+            utilisateur.msg_attente = []
             utilisateur.communication_window = Windows.DiscussWindow(utilisateur)
             utilisateur.communication_window.show_waiting_text()
             a_communique = utilisateur.communication_window.show()
