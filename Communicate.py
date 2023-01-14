@@ -449,6 +449,11 @@ def envoyer_message(client, message):
     """
     cle = client.ks
 
-    msg_crypt = Cryptage.crypter(message, cle)
+    try:
+        msg_crypt = Cryptage.crypter(message, cle)
+        client.fiable_socket.sendto(msg_crypt, client.addr_arbitre)
+        ok = True
+    except Exception as e:
+        ok = False
 
-    client.fiable_socket.sendto(msg_crypt, client.addr_arbitre)
+    return ok

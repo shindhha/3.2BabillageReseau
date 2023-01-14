@@ -51,6 +51,10 @@ def set_location(window: sg.Window) -> None:
         size_x, size_y = window.current_size_accurate()
         x = x - size_x / 2
         y = y - size_y / 2
+        if x < 0:
+            x = 0
+        if y < 0:
+            y = 0
         window.TKroot.geometry("+%d+%d" % (x, y))
 
         print("Window moved to", x, y)
@@ -350,9 +354,11 @@ class DiscussWindow:
 
                 end = True
             elif event == 'btn_send':
-                envoyer_message(self.client, values['input'])
-                self.__print_msg(self.__expediteur, values['input'])
-                self.__window['input'].update('')
+                if envoyer_message(self.client, values['input']):
+                    self.__print_msg(self.__expediteur, values['input'])
+                    self.__window['input'].update('')
+                else:
+                    ErrorWindow('Le message n\'a pas pu être envoyé').show()
         self.close()
 
     def close(self):
