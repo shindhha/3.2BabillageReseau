@@ -1,7 +1,6 @@
 import cryptage
 import socket
 import threading as th
-import time
 
 port_pirate = 5001
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -9,8 +8,8 @@ s.bind(('localhost', port_pirate))
 fin_ecoute_msg = False
 
 phrase = ''
-sousPhrase = [] # listes acceuillant les sous phrases
-repetition = [] # listes des dictionnaire recapitulant les repetitions de chaque lettres dans les sous-message
+sousPhrase = [] # listes accueillant les sous phrases
+repetition = [] # listes des dictionnaires recapitulant les repetitions de chaques lettres dans les sous-messages
 
 longeurCle = int(input('entrez la longeur de la clef : '))
 
@@ -20,13 +19,13 @@ accent = ['é','è','ë','ê','à','â','ä','û','ü','ù','ï','î','ö','ô',
 # creation du dictionnaire contenant l'alphabet utiliser pour le cryptage / decryptage avec les caracteres de la table ascii
 for i in range (32 , 92):
     lettres[i - 32] = chr (i)
-# esclusion du carcater '\'
+# exclusion du caractère '\'
 for i in range (93 , 123):
     lettres[i - 32 - 1] = chr (i)
 
-longeur = len(lettres)
+longueur = len(lettres)
 for i in range (len(accent)):
-    lettres[longeur + i] = accent[i]
+    lettres[longueur + i] = accent[i]
 
 
 def initialisation() -> None:
@@ -45,9 +44,9 @@ def collage() -> None:
     while not fin_ecoute_msg:
         (recu,coord) = s.recvfrom(1024)
         recu = recu.decode()
-        enTrop = len(recu) % longeurCle # calcul du nombre de aractere a retirer pour tomber sur une phrase de logeur = 0 modulo longeurCle
-        aAjouter = recu[:len(recu) - enTrop] # supression si besoins des derniers caracteres
-        phrase += aAjouter #ajout du message au reste de la phrase
+        enTrop = len(recu) % longeurCle # calcul du nombre de caractères à retirer pour tomber sur une phrase de logeur = 0 modulo longueurCle
+        aAjouter = recu[:len(recu) - enTrop] # suppression si besoins des derniers caractères
+        phrase += aAjouter # ajout du message au reste de la phrase
         print("Réception d'un nouveau message. Taille du buffer : " + str(len(phrase)) + " caractères")
 
     print("Fin du thread d'écoute des messages")
@@ -55,18 +54,18 @@ def collage() -> None:
 
 def decoupage() -> list[str]:
     for i in range (len(phrase)):
-        sousPhrase[i % longeurCle] += phrase[i] #decoupage de la phrase en sous-phrase
+        sousPhrase[i % longeurCle] += phrase[i] # decoupage de la phrase en sous-phrase
     return sousPhrase
 
 
 def frequence(listeSousPhrase: list[str]) -> list[dict]:
-    # boucle sur les sous-message
+    # boucle sur tous les sous-messages
     for n in range(longeurCle):
-        for i in listeSousPhrase[n]: # selection des caracteres de la sous-message 1 par 1
-            if (repetition[n].get(i,"None") == "None"): # verification si lettre deja dans dictionnaire ou premiere apparition
-                repetition[n][i] = 1 # cas premiere apparition: ajout de la lettre dans le dictionaire et nombre d'apparition a 1
+        for i in listeSousPhrase[n]: # selection des caractères du sous-message 1 par 1
+            if (repetition[n].get(i,"None") == "None"): # verification si lettre deja dans dictionnaires ou premiere apparition
+                repetition[n][i] = 1 # cas premiere apparition: ajout de la lettre dans le dictionnaire et nombre d'apparitions à 1
             else:
-                repetition[n][i] = repetition[n].get(i) + 1 # cas deja dans le dictionaire: ajout de 1 au nombre d'aparition de la lettre
+                repetition[n][i] = repetition[n].get(i) + 1 # cas deja dans le dictionaire: ajout de 1 au nombre d'apparition de la lettre
     return repetition
 
 
