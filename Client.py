@@ -8,6 +8,8 @@ import threading as th
 from FiableSocket import FiableSocket
 import re
 
+from gitProj.Client import Cryptage
+
 
 class Utilisateur:
     def __init__(self, fiable_socket: FiableSocket):
@@ -50,8 +52,19 @@ def connexion():
     Permet à l'utilisateur d'entrer son nom d'utilisateur
     :return:
     """
-    fenetre = Windows.ConnectWindow()
-    name = fenetre.show()
+    end = False
+
+    while not end:
+        fenetre = Windows.ConnectWindow()
+        name = fenetre.show()
+        if name is None:
+            end = True
+        else:
+            if not Cryptage.cleOk(name):
+                message_erreur('Le nom d\'utilisateur est invalide')
+            else:
+                end = True
+
     return name
 
 
@@ -142,7 +155,7 @@ def demarrer_communication_initialisateur():
     # Demande du nom du destinataire
     fenetre = Windows.SimpleInputWindow('Communiquer', 'Entrez le nom du destinataire :')
     nom_destinataire = fenetre.show()
-    if nom_destinataire is not None and len(nom_destinataire) > 0 and nom_destinataire != utilisateur.nom:
+    if nom_destinataire is not None and len(nom_destinataire) > 0 and nom_destinataire != utilisateur.nom and Cryptage.cleOk(nom_destinataire):
         utilisateur.nom_destinataire = nom_destinataire
     else:
         erreur = 'Nom du destinataire invalide'
