@@ -5,9 +5,7 @@ import Utils
 import Communicate
 from Cryptage import cleOk
 import threading as th
-from SimpleReceiver import SimpleReceiver
 from FiableSocket import FiableSocket
-import socket
 import re
 
 
@@ -235,6 +233,7 @@ def actions():
                 if demande_ok:
                     rejoindre_communication()
 
+                Communicate.envoi_msg_debind(utilisateur)
                 utilisateur.demande_connexion = False
 
             else:
@@ -242,6 +241,8 @@ def actions():
                 if erreur is not None:
                     msg_info = 'ERREUR : ' + erreur
                     couleur = 'red'
+                else:
+                    Communicate.envoi_msg_debind(utilisateur)
 
         else:
             print('Action inconnue')

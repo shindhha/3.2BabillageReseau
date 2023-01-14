@@ -401,6 +401,7 @@ def accepter_refuser_dialogue(client, accepter):
         Dans ce cas-là, nous sommes l'utilisateur B
         Format du msg envoyé si on accepte : EKs<Nom utilisateur B, Nom utilisateur A,T5>.
         Format du msg envoyé si on refuse : EKs<T5, Nom utilisateur B, Nom utilisateur A>.
+
     :param client: L'objet Utilisateur contenant les informations du client
     :param accepter: Booléen indiquant si on accepte ou non la demande de dialogue
     :return: None
@@ -416,10 +417,28 @@ def accepter_refuser_dialogue(client, accepter):
         msg_crypt = msg_base + ',T5'
     else:
         msg_crypt = 'T5,' + msg_base
-
     msg_crypt = Cryptage.crypter(msg_crypt, ks)
     client.fiable_socket.sendto(msg_crypt, client.addr_arbitre)
 
+    # Envoi du msg de débind à l'arbitre si le dialogue est refusé
+    if not accepter:
+        envoi_msg_debind(client)
+
+def envoi_msg_debind(client):
+    """
+    Permet d'envoyer au serveur le message de déliaison de la bdd.
+
+    INFO :
+        Format du msg envoyé : Eclef<Nom utilisateur, T5>.
+
+    :return: None
+    """
+    nom_utilisateur = client.nom
+    cle = client.cle
+
+    msg_crypt = nom_utilisateur + ',T5'
+    msg_crypt = Cryptage.crypter(msg_crypt, cle)
+    client.fiable_socket.sendto(msg_crypt, client.addr_arbitre)
 
 def envoyer_message(client, message):
     """
