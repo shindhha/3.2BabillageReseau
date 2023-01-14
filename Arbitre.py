@@ -6,6 +6,15 @@ import threading as th
 from FiableSocket import FiableSocket
 
 
+# --- Informations relatives au pirate automatisée ---
+# le pirate recevra les messages de seulement la première communication effectuée par 2 utilisateurs.
+# Les autres communications ne seront pas reçues par le pirate. Pour que le pirate reçoit d'autres communications, il
+# faut relancer le serveur et que 2 utilisateurs rentrent en communication.
+pirate_active = True
+pirate_ip = 'localhost'
+pirate_port = 5001
+
+
 def create_socket(ip: str, port: int) -> tuple[socket, int]:
     """
     Créé un socket UDP et la bind sur l'adresse et le port d'écoute
@@ -55,6 +64,11 @@ if __name__ == "__main__":
 
     sck, listening_port = create_socket(listening_ip, listening_port)
     if sck is not None:
+        # Initialisation des infos du pirate
+        Communicate.pirate_fin = not pirate_active
+        Communicate.addr = (pirate_ip, pirate_port)
+        Communicate.pirate_users = [] if pirate_active else [None, None]
+
         Database.init_db()
         fs = FiableSocket(sck)
         recvthread = th.Thread(target=Communicate.recv, args=(fs,))

