@@ -1,7 +1,9 @@
 import sqlite3
 from Cryptage import cleOk
+import os
 
-db_path = 'database.db'
+# On place le fichier au même endroit que ce module
+db_path = os.path.join(os.path.dirname(__file__), 'database.db')
 
 
 def init_db():
