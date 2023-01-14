@@ -178,47 +178,54 @@ class FiableSocket:
         while self.thread_run:
 
             # Récupération du message
-            msg, self.destinataire = self.socket.recvfrom(1024)
-            debug_print("Message reçu : " + msg.decode())
-            msg = msg.decode()
+            msg_recu = False
+            try:
+                msg, self.destinataire = self.socket.recvfrom(1024)
+                msg_recu = True
+            except Exception as e:
+                debug_print("Erreur lors de la réception d'un message : " + str(e))
 
-            checksum, type_msg, cpteur, message = checksum_msg_decode(msg)
-            debug_print("Checksum : " + str(checksum) + " / Type : " + str(type_msg) + " / Cpteur : " + str(
-                cpteur) + " / Message : " + message)
+            if msg_recu:
+                debug_print("Message reçu : " + msg.decode())
+                msg = msg.decode()
 
-            if type_msg == 0:
-                # Réception d'un message
-                # On vérifie si le message est bien intègre
-                msg_ok = valider_checksum(checksum, type_msg, cpteur, message)
+                checksum, type_msg, cpteur, message = checksum_msg_decode(msg)
+                debug_print("Checksum : " + str(checksum) + " / Type : " + str(type_msg) + " / Cpteur : " + str(
+                    cpteur) + " / Message : " + message)
 
-                if msg_ok:
-                    debug_print(f"Message valide reçu : {checksum}-{type_msg}-{message}")
-                    # Vérification si le message n'a pas déjà été reçu (Cas No3)
-                    if self.destinataire not in self.last_msg_recv or self.last_msg_recv[self.destinataire] != msg:
-                        self.last_msg_recv[self.destinataire] = msg
+                if type_msg == 0:
+                    # Réception d'un message
+                    # On vérifie si le message est bien intègre
+                    msg_recu = valider_checksum(checksum, type_msg, cpteur, message)
 
-                        # Envoi du message sur la partie réception
-                        self.recv_queue.put((self.destinataire, message))
-                        debug_print(f"Message envoyé sur la queue : {checksum}-{type_msg}-{message}")
+                    if msg_recu:
+                        debug_print(f"Message valide reçu : {checksum}-{type_msg}-{message}")
+                        # Vérification si le message n'a pas déjà été reçu (Cas No3)
+                        if self.destinataire not in self.last_msg_recv or self.last_msg_recv[self.destinataire] != msg:
+                            self.last_msg_recv[self.destinataire] = msg
 
-                    # On envoie l'ACK
-                    self.socket.sendto(checksum_msg_encode(1, 99, 'ACK').encode(), self.destinataire)
-                    debug_print(f"Envoi de l'ACK : {checksum_msg_encode(1, 99, 'ACK')}")
+                            # Envoi du message sur la partie réception
+                            self.recv_queue.put((self.destinataire, message))
+                            debug_print(f"Message envoyé sur la queue : {checksum}-{type_msg}-{message}")
 
-                else:
-                    debug_print(f"Message corrompu reçu : {checksum}-{type_msg}-{cpteur}-{message}")
+                        # On envoie l'ACK
+                        self.socket.sendto(checksum_msg_encode(1, 99, 'ACK').encode(), self.destinataire)
+                        debug_print(f"Envoi de l'ACK : {checksum_msg_encode(1, 99, 'ACK')}")
 
-            if type_msg == 1:
-                # Réception d'un ACK
-                # On vérifie si le message est bien intègre
-                msg_ok = valider_checksum(checksum, type_msg, cpteur, message)
+                    else:
+                        debug_print(f"Message corrompu reçu : {checksum}-{type_msg}-{cpteur}-{message}")
 
-                if msg_ok:
-                    # On a reçu l'ACK du dernier message envoyé, on peut donc envoyer le prochain message
-                    self.attente_ack = False
-                    debug_print(f"Réception d'un ACK : {checksum}-{type_msg}-{message}")
-                else:
-                    debug_print(f"Réception ACK corrompu reçu : {checksum}-{type_msg}-{message}")
+                if type_msg == 1:
+                    # Réception d'un ACK
+                    # On vérifie si le message est bien intègre
+                    msg_recu = valider_checksum(checksum, type_msg, cpteur, message)
+
+                    if msg_recu:
+                        # On a reçu l'ACK du dernier message envoyé, on peut donc envoyer le prochain message
+                        self.attente_ack = False
+                        debug_print(f"Réception d'un ACK : {checksum}-{type_msg}-{message}")
+                    else:
+                        debug_print(f"Réception ACK corrompu reçu : {checksum}-{type_msg}-{message}")
 
         debug_print("Fin du thread de réception")
 
