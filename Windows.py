@@ -462,7 +462,6 @@ class Menu:
         si une demande de connexion est en attente
         :return None
         """
-        print("UPDATE CONN BTN")
         if self.client.demande_connexion and self.client.cle is not None:
             self.window['btn_communiquer'].update(button_color=(None, 'green'))
         else:

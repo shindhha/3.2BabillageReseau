@@ -37,8 +37,7 @@ def process_msg(queue, client):
     while not end:
         addr, msg = queue.get()
 
-        print('Message reçu : ' + msg)
-        print('status : ' + status)
+        print('Message reçu : ' + msg + ' avec comme status ' + status)
 
 
         if msg != 'end':
@@ -237,7 +236,7 @@ def process_demande_dialog(msg, client):
     nom_client = client.nom
     nom_arbitre = client.nom_arbitre
 
-    print("DEBUG :", cle, nom_client, nom_arbitre)
+    print("Réception d'une demande de communication")
 
     if cle is not None and nom_client is not None and nom_arbitre is not None:
         decrypt_msg = Cryptage.decrypter(msg, cle)

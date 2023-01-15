@@ -237,7 +237,6 @@ def actions():
                 couleur = 'green'
 
         elif action == 'communiquer':
-            print('Communiquer')
             if utilisateur.demande_connexion:
                 demande_ok = Windows.YesNoWindow('Demande de communication',
                                                  'Accepter la demande de communication de '
@@ -258,7 +257,7 @@ def actions():
                     Communicate.envoi_msg_debind(utilisateur)
 
         else:
-            print('Action inconnue')
+            print('WARN : Action inconnue')
 
     # L'utilisateur a quitté l'application, on envoie le message de suppression de notre clé au serveur
     if utilisateur.cle is not None:
