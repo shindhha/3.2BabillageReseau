@@ -257,28 +257,3 @@ def get_username(addr: tuple[str, int]) -> str | None:
     conn.close()
 
     return nom_util
-
-
-def desactiver_communication(addr: tuple[str, int]):
-    """
-    Permet de s'assurer que les communications avec un autre utilisateur sont désactivées pour l'adresse mise en paramètre.
-    Si la communication est active, on dé-bind le champ destinataire pour les 2 noms d'utilisateur
-    :param addr: L'adresse pour laquelle on désactive la communication
-    :return: None
-    """
-
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-
-    c.execute("SELECT destinataire FROM clefs WHERE ip = (?) AND port = (?)", (addr[0], addr[1]))
-
-    destinataire = c.fetchone()
-    if destinataire is not None:  # Si la requête SQL a retourné des lignes
-        destinataire = destinataire[0]
-        print("DESTINATAIRE :", destinataire)
-        if destinataire is not None:  # Si le destinataire est défini pour la ligne de d'adresse demandée
-            c.execute("UPDATE clefs SET destinataire = NULL WHERE ip = (?) AND port = (?)", (addr[0], addr[1]))
-            c.execute("UPDATE clefs SET destinataire = NULL WHERE nom = (?)", (destinataire,))
-            conn.commit()
-
-    conn.close()

@@ -19,7 +19,7 @@ def create_socket(ip: str, port: int) -> tuple[socket, int]:
             ok = True
         except socket.error as e:
             port = 0
-            print('Erreur lors de la création du socket : ', e, '\n Le port d\'écoute est-t-il déjà utilisé ?')
+            print('Erreur lors de la création du socket : \n --> ', e, '\n Le port d\'écoute est-t-il déjà utilisé ?')
 
     if ip == '':
         print('WARN : Le serveur écoute sur toutes les interfaces réseau !')
