@@ -235,7 +235,7 @@ def debug_print(msg):
     Utilisé pour afficher tous les messages de débug de la classe FiableSocket avec horodatage
     :param msg: Le message à afficher sur la sortie standard
     """
-    if True:
+    if False:  # Mettre à True pour afficher les messages de débug
         heure = time.strftime("%H:%M:%S", time.localtime())
         print(f"[FiableSocket] - [{heure}] - {msg}")
 

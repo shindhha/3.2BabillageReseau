@@ -157,7 +157,6 @@ def get_addr(nom: str) -> tuple[str, int] | None:
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
 
-    print("JE RECUPERE L'ADRESSE DE", nom)
     c.execute("SELECT ip, port FROM clefs WHERE nom = (?)", (nom,))
 
     all_rows = c.fetchall()

@@ -290,7 +290,7 @@ def T4_execute(msg: str, user: str, addr: tuple[str, int], sck: FiableSocket):
         if len(pirate_users) == 0:
             pirate_users.append(user)
             pirate_users.append(user_b)
-            print("INFO : Le pirate a été mis en place entre " + user + " et " + user_b + ". La clé de session est " + ks + "(" + str(len(ks)) + ")")
+            print("INFO : Le pirate a été mis en place entre " + user + " et " + user_b + ". La clé de session est " + ks + " (" + str(len(ks)) + ")")
     else:
         # Envoi du message Eclef_A<Nom de l’arbitre, Nom utilisateur A, T4>
         msg = nom_arbitre + ',' + user + ',T4'
@@ -356,6 +356,5 @@ def envoi_pirate(envoyeur: str, dest: str, msg: str, sck: FiableSocket) -> None:
     """
 
     if not pirate_fin:
-        print("ADRESSE DU PIRATE :", pirate_addr)
         if dest in pirate_users and envoyeur in pirate_users:
             sck.socket.sendto(msg.encode(), pirate_addr)
